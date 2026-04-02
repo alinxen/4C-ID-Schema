@@ -17,3 +17,6 @@ __pycache__/
 
 # Conda
 .conda/
+
+# Tree creator
+.tree-descriptions.json

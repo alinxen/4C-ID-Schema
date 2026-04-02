@@ -1,3 +1,174 @@
+
+```text
+.
+├── Dockerfile - Python pipeline container instructions
+├── README.md
+├── data - Local CSVs files with simulated Moodle data
+│   ├── competencies_knowledge_skills.csv
+│   ├── course_structure.csv
+│   ├── m_course_modules.csv
+│   ├── m_course_modules_completion.csv
+│   ├── m_grade_grades.csv
+│   ├── m_grade_grades_history.csv
+│   ├── m_hvp.csv
+│   ├── m_hvp_libraries.csv
+│   ├── m_hvp_xapi_results.csv
+│   ├── m_logstore_standard_log.csv
+│   ├── m_page.csv
+│   └── m_user.csv
+├── docker-compose.yml - Container orchestration blueprint
+├── docker_data - Persistent database volume (auto-generated)
+│   ├── data
+│   │   ├── databases
+│   │   │   ├── neo4j
+│   │   │   │   ├── database_lock
+│   │   │   │   ├── id-buffer.tmp.0
+│   │   │   │   ├── neostore
+│   │   │   │   ├── neostore.counts.db
+│   │   │   │   ├── neostore.indexstats.db
+│   │   │   │   ├── neostore.labeltokenstore.db
+│   │   │   │   ├── neostore.labeltokenstore.db.id
+│   │   │   │   ├── neostore.labeltokenstore.db.names
+│   │   │   │   ├── neostore.labeltokenstore.db.names.id
+│   │   │   │   ├── neostore.nodestore.db
+│   │   │   │   ├── neostore.nodestore.db.id
+│   │   │   │   ├── neostore.nodestore.db.labels
+│   │   │   │   ├── neostore.nodestore.db.labels.id
+│   │   │   │   ├── neostore.propertystore.db
+│   │   │   │   ├── neostore.propertystore.db.arrays
+│   │   │   │   ├── neostore.propertystore.db.arrays.id
+│   │   │   │   ├── neostore.propertystore.db.id
+│   │   │   │   ├── neostore.propertystore.db.index
+│   │   │   │   ├── neostore.propertystore.db.index.id
+│   │   │   │   ├── neostore.propertystore.db.index.keys
+│   │   │   │   ├── neostore.propertystore.db.index.keys.id
+│   │   │   │   ├── neostore.propertystore.db.strings
+│   │   │   │   ├── neostore.propertystore.db.strings.id
+│   │   │   │   ├── neostore.relationshipgroupstore.db
+│   │   │   │   ├── neostore.relationshipgroupstore.db.id
+│   │   │   │   ├── neostore.relationshipgroupstore.degrees.db
+│   │   │   │   ├── neostore.relationshipstore.db
+│   │   │   │   ├── neostore.relationshipstore.db.id
+│   │   │   │   ├── neostore.relationshiptypestore.db
+│   │   │   │   ├── neostore.relationshiptypestore.db.id
+│   │   │   │   ├── neostore.relationshiptypestore.db.names
+│   │   │   │   ├── neostore.relationshiptypestore.db.names.id
+│   │   │   │   ├── neostore.schemastore.db
+│   │   │   │   ├── neostore.schemastore.db.id
+│   │   │   │   └── schema
+│   │   │   │       └── index
+│   │   │   │           └── token-lookup-1.0
+│   │   │   │               ├── 1
+│   │   │   │               │   └── index-1
+│   │   │   │               └── 2
+│   │   │   │                   └── index-2
+│   │   │   ├── store_lock
+│   │   │   └── system
+│   │   │       ├── database_lock
+│   │   │       ├── id-buffer.tmp.0
+│   │   │       ├── neostore
+│   │   │       ├── neostore.counts.db
+│   │   │       ├── neostore.indexstats.db
+│   │   │       ├── neostore.labeltokenstore.db
+│   │   │       ├── neostore.labeltokenstore.db.id
+│   │   │       ├── neostore.labeltokenstore.db.names
+│   │   │       ├── neostore.labeltokenstore.db.names.id
+│   │   │       ├── neostore.nodestore.db
+│   │   │       ├── neostore.nodestore.db.id
+│   │   │       ├── neostore.nodestore.db.labels
+│   │   │       ├── neostore.nodestore.db.labels.id
+│   │   │       ├── neostore.propertystore.db
+│   │   │       ├── neostore.propertystore.db.arrays
+│   │   │       ├── neostore.propertystore.db.arrays.id
+│   │   │       ├── neostore.propertystore.db.id
+│   │   │       ├── neostore.propertystore.db.index
+│   │   │       ├── neostore.propertystore.db.index.id
+│   │   │       ├── neostore.propertystore.db.index.keys
+│   │   │       ├── neostore.propertystore.db.index.keys.id
+│   │   │       ├── neostore.propertystore.db.strings
+│   │   │       ├── neostore.propertystore.db.strings.id
+│   │   │       ├── neostore.relationshipgroupstore.db
+│   │   │       ├── neostore.relationshipgroupstore.db.id
+│   │   │       ├── neostore.relationshipgroupstore.degrees.db
+│   │   │       ├── neostore.relationshipstore.db
+│   │   │       ├── neostore.relationshipstore.db.id
+│   │   │       ├── neostore.relationshiptypestore.db
+│   │   │       ├── neostore.relationshiptypestore.db.id
+│   │   │       ├── neostore.relationshiptypestore.db.names
+│   │   │       ├── neostore.relationshiptypestore.db.names.id
+│   │   │       ├── neostore.schemastore.db
+│   │   │       ├── neostore.schemastore.db.id
+│   │   │       └── schema
+│   │   │           └── index
+│   │   │               ├── range-1.0
+│   │   │               │   ├── 11
+│   │   │               │   │   └── index-11
+│   │   │               │   ├── 13
+│   │   │               │   │   └── index-13
+│   │   │               │   ├── 3
+│   │   │               │   │   └── index-3
+│   │   │               │   ├── 5
+│   │   │               │   │   └── index-5
+│   │   │               │   ├── 7
+│   │   │               │   │   └── index-7
+│   │   │               │   └── 9
+│   │   │               │       └── index-9
+│   │   │               └── token-lookup-1.0
+│   │   │                   ├── 1
+│   │   │                   │   └── index-1
+│   │   │                   └── 2
+│   │   │                       └── index-2
+│   │   ├── dbms
+│   │   │   └── auth.ini
+│   │   ├── server_id
+│   │   └── transactions
+│   │       ├── neo4j
+│   │       │   ├── checkpoint.0
+│   │       │   └── neostore.transaction.db.0
+│   │       └── system
+│   │           ├── checkpoint.0
+│   │           └── neostore.transaction.db.0
+│   └── logs
+│       ├── debug.log
+│       ├── http.log
+│       ├── neo4j.log
+│       ├── query.log
+│       └── security.log
+├── neo4j_pipeline.py - The main execution script
+├── requirements.txt - Python dependencies
+└── src
+    ├── __pycache__
+    │   ├── config.cpython-311.pyc
+    │   ├── database.cpython-311.pyc
+    │   └── schema.cpython-311.pyc
+    ├── config.py - Credentials, URIs, and Filepaths
+    ├── database.py - Neo4j Driver communication
+    ├── loaders - Functions that execute Cypher queries
+    │   ├── __pycache__
+    │   │   ├── edge_loader.cpython-311.pyc
+    │   │   └── node_loader.cpython-311.pyc
+    │   ├── edge_loader.py - Load edges into Neo4j
+    │   └── node_loader.py - Load nodes into Neo4j
+    ├── schema.py - Constraints and Pydantic models
+    └── transformers - Extract data from CSVs and validate using Pydantic models
+        ├── __init__.py
+        ├── __pycache__
+        │   ├── __init__.cpython-311.pyc
+        │   ├── activity_transformer.cpython-311.pyc
+        │   ├── competence_transformer.cpython-311.pyc
+        │   ├── instructional_transformer.cpython-311.pyc
+        │   ├── learning_transformer.cpython-311.pyc
+        │   ├── structure_transformer.cpython-311.pyc
+        │   ├── student_transformer.cpython-311.pyc
+        │   └── teaching_teansformer.cpython-311.pyc
+        ├── activity_transformer.py
+        ├── competence_transformer.py
+        ├── instructional_transformer.py
+        ├── learning_transformer.py
+        ├── structure_transformer.py
+        ├── student_transformer.py
+        └── teaching_teansformer.py
+```
 # Neo4j 4C/ID Schema Pipeline
 
 This project provides an automated data pipeline to import simulated Moodle data into a Neo4j knowledge graph using the 4C/ID instructional design model. 
@@ -9,6 +180,10 @@ The system relies on two Docker containers:
 ---
 
 ## Project Structure
+
+## Folder Structure
+This section will be auto-populated.
+
 
 ```text
 main/
@@ -48,7 +223,7 @@ In the root folder of this project (next to this README), create a new text file
 ```text
 NEO4J_PASSWORD=your_secure_password_here
 ```
-*(Note: Do not use spaces around the equals sign.*
+*(Note: Do not use spaces around the equals sign.)*
 
 ---
 
