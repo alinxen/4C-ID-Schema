@@ -1,0 +1,21 @@
+task_class_id,task_class,task_id,task,pi_id,procedural_title,si_id,supportive_title,practice_id,practice_title
+A,Autobahn,A1,A1 Datenimport,PI-A1,(PI) Datenimport (Info),SI-IV,(SI) Inhaltliches Verständnis,PTP-A1,(PTP) Datenimport
+A,Autobahn,A2,A2 Hypothesen,PI-A2,(PI) Hypothesen,SI-VIS,(SI) Datenvisualisierung,,
+A,Autobahn,A3,A3 Sichtprüfung,PI-A3,(PI) Sichtprüfung,SI-VAL,(SI) Datenvalidierung,,
+A,Autobahn,A4,A4 Heatmap,PI-A4,(PI) Heatmap,SI-AUS,(SI) Ausreißeridentifikation,,
+A,Autobahn,A5,A5 Lineare Regression,PI-A5,(PI) Lineare Regression,SI-STAT,(SI) Statistische Analysen,,
+D,Direktverkauf,D1,D1 Datentypen,PI-D1,(PI) Datentypen,SI-IV,(SI) Inhaltliches Verständnis,,
+D,Direktverkauf,D2,D2 Visualisierungsarten,PI-D2,(PI) Visualisierungsarten,SI-VIS,(SI) Datenvisualisierung,PTP-D2,(PTP) Visualisierungsarten
+D,Direktverkauf,D3,D3 Plausibilitätsprüfung,PI-D3,(PI) Plausibilitätsprüfung,SI-VAL,(SI) Datenvalidierung,PTP-D3,(PTP) Plausibilitätsprüfung
+D,Direktverkauf,D4,D4 Boxplot und Streudiagramm,PI-D4,(PI) Boxplot und Streudiagramm,SI-AUS,(SI) Ausreißeridentifikation,,
+D,Direktverkauf,D5,D5 Zeitreihenzerlegung,PI-D5,(PI) Zeitreihenzerlegung,SI-STAT,(SI) Statistische Analysen,,
+E,Elektroautos,E1,E1 Konverterfunktionen,PI-E1,(PI) Konverterfunktionen,SI-IV,(SI) Inhaltliches Verständnis,,
+E,Elektroautos,E2,E2 Data Storytelling,PI-E2,(PI) Data Storytelling,SI-VIS,(SI) Datenvisualisierung,,
+E,Elektroautos,E3,E3 Datenlücken,PI-E3,(PI) Datenlücken,SI-FW,(SI) Untersuchung fehlender Werte,PTP-E3,(PTP) Datenlücken
+E,Elektroautos,E4,E4 Histogramm,PI-E4,(PI) Histogramm,SI-AUS,(SI) Ausreißeridentifikation,,
+E,Elektroautos,E5,E5 K-Means Clustering,PI-E5,(PI) K-Means Clustering,SI-STAT,(SI) Statistische Analysen,,
+F,Fahrverhalten,F1,F1 Zeichenkodierung,PI-F1,(PI) Zeichenkodierung,SI-IV,(SI) Inhaltliches Verständnis,,
+F,Fahrverhalten,F2,F2 Darstellungsarten,PI-F2,(PI) Darstellungsarten,SI-VIS,(SI) Datenvisualisierung,,
+F,Fahrverhalten,F3,F3 Messfehler,PI-F3,(PI) Messfehler,SI-FW,(SI) Untersuchung fehlender Werte,,
+F,Fahrverhalten,F4,F4 Moving Average,PI-F4,(PI) Moving Average,SI-AUS,(SI) Ausreißeridentifikation,,
+F,Fahrverhalten,F5,F5 CUSUM,PI-F5,(PI) CUSUM,SI-STAT,(SI) Statistische Analysen,,

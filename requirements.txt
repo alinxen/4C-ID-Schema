@@ -1,0 +1,4 @@
+neo4j==5.28.1
+pandas==2.3.3
+pydantic==2.12.5
+python-dotenv==1.2.2

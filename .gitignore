@@ -1,0 +1,19 @@
+# Ignore Docker data volumes
+docker_data/
+
+# Ignore any other environment files or logs
+.env
+*.log
+.venv/
+env/
+venv/
+ENV/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Conda
+.conda/

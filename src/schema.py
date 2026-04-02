@@ -1,0 +1,300 @@
+from pydantic import BaseModel, Field
+from typing import ClassVar
+
+
+# -------------------------------------------------
+# NODES of the 4C/ID-SCHEMA
+# -------------------------------------------------
+
+class SKILL(BaseModel):
+    label                   : ClassVar[str] = "Skill"
+    skill_id                : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    skill_title             : str 
+    skill_group_id          : str 
+    skill_group_title       : str
+    
+class KNOWLEDGE(BaseModel):
+    label                   : ClassVar[str] = "Knowledge"
+    knowledge_id            : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    knowledge_title         : str 
+    knowledge_group_id      : str 
+    knowledge_group_title   : str
+    
+class COMPETENCE(BaseModel):
+    label                   : ClassVar[str] = "Competence"
+    competence_id           : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    competence_title        : str 
+    competence_group_id     : str 
+    competence_group        : str    
+
+class TASK_CLASS(BaseModel):
+    label                   : ClassVar[str] = "Task_Class"
+    task_class_id           : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    task_class              : str     
+    
+class LEARNING_TASK(BaseModel):
+    label                   : ClassVar[str] = "Learning_Task"
+    task_id                 : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    course_id               : int
+    task_title              : str
+    task_type               : str
+    
+class SUPPORTIVE_INFORMATION(BaseModel):
+    label                   : ClassVar[str] = "Supportive_Information"
+    si_id                   : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    course_id               : int 
+    si_title                : str
+    
+class PROCEDURAL_INFORMATION(BaseModel):
+    label                   : ClassVar[str] = "Procedural_Information"
+    pi_id                   : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    course_id               : int 
+    pi_title                : str
+
+class PART_TASK_PRACTICE(BaseModel):
+    label                   : ClassVar[str] = "Part_Task_Practice"
+    practice_id             : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    practice_title          : str     
+    
+class LEARNING_SESSION(BaseModel):
+    label                   : ClassVar[str] = "Learning_Session"
+    session_id              : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    start_time              : str
+    end_time                : str
+    student_id              : int
+    rds_ID                  : str
+    
+class STUDENT(BaseModel):
+    label                   : ClassVar[str] = "Student"
+    student_id              : str  = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    username                : str 
+    firstname               : str 
+    lastname                : str 
+    email                   : str 
+        
+# -------------------------------------------------
+# EDGES of the 4C/ID-SCHEMA
+# -------------------------------------------------    
+    
+class DEVELOPS_COMPETENCE(BaseModel):
+    label                   : ClassVar[str] = "develops"
+    label_id                : ClassVar[str] = "develops_id"
+    source_label            : ClassVar[str] = "Learning_Task"
+    source_id_field         : ClassVar[str] = "task_id"
+    target_label            : ClassVar[str] = "Competence"
+    target_id_field         : ClassVar[str] = "competence_id"
+    develops_id             : str
+    task_id                 : str
+    competence_id           : str
+
+class PRACTICES_SKILL(BaseModel):
+    label                   : ClassVar[str] = "practices"
+    label_id                : ClassVar[str] = "practices_id"
+    source_label            : ClassVar[str] = "Learning_Task"
+    source_id_field         : ClassVar[str] = "task_id"
+    target_label            : ClassVar[str] = "Skill"
+    target_id_field         : ClassVar[str] = "skill_id"
+    practices_id            : str
+    task_id                 : str
+    skill_id                : str
+    cognitive_dimension     : str
+    
+class APPLIES_KNOWLEDGE(BaseModel):
+    label                   : ClassVar[str] = "applies"
+    label_id                : ClassVar[str] = "applies_id"
+    source_label            : ClassVar[str] = "Learning_Task"
+    source_id_field         : ClassVar[str] = "task_id"
+    target_label            : ClassVar[str] = "Knowledge"
+    target_id_field         : ClassVar[str] = "knowledge_id"
+    applies_id              : str
+    task_id                 : str
+    knowledge_id            : str
+    knowledge_dimension     : str    
+    
+class ATTEMPTED(BaseModel):
+    label                   : ClassVar[str] = "attempted"
+    label_id                : ClassVar[str] = "attempted_id"
+    source_label            : ClassVar[str] = "Student"
+    source_id_field         : ClassVar[str] = "student_id"
+    target_label            : ClassVar[str] = "Learning_Task"
+    target_id_field         : ClassVar[str] = "task_id"
+    attempted_id            : str
+    timestamp               : str
+    score                   : float
+    passed                  : bool
+    student_response        : str 
+    correct_response        : str
+    task_id                 : str
+    student_id              : str
+    
+class REQUIRES_SKILL(BaseModel):
+    label                   : ClassVar[str] = "requires_s"
+    label_id                : ClassVar[str] = "requires_s_id"
+    source_label            : ClassVar[str] = "Competence"
+    source_id_field         : ClassVar[str] = "competence_id"
+    target_label            : ClassVar[str] = "Skill"
+    target_id_field         : ClassVar[str] = "skill_id"
+    requires_s_id           : str
+    competence_id           : str
+    skill_id                : str    
+    
+class REQUIRES_KNOWLEDGE(BaseModel):
+    label                   : ClassVar[str] = "requires_k"
+    label_id                : ClassVar[str] = "requires_k_id"
+    source_label            : ClassVar[str] = "Competence"
+    source_id_field         : ClassVar[str] = "competence_id"
+    target_label            : ClassVar[str] = "Knowledge"
+    target_id_field         : ClassVar[str] = "knowledge_id"
+    requires_k_id           : str
+    competence_id           : str
+    knowledge_id            : str    
+    
+class GROUPS(BaseModel):
+    label                   : ClassVar[str] = "groups"
+    label_id                : ClassVar[str] = "groups_id"
+    source_label            : ClassVar[str] = "Task_Class"
+    source_id_field         : ClassVar[str] = "task_class_id"
+    target_label            : ClassVar[str] = "Learning_Task"
+    target_id_field         : ClassVar[str] = "task_id"
+    groups_id               : str
+    task_class_id           : str
+    task_id                 : str        
+    
+class PROVIDES(BaseModel):
+    label                   : ClassVar[str] = "provides"
+    label_id                : ClassVar[str] = "provides_id"
+    source_label            : ClassVar[str] = "Task_Class"
+    source_id_field         : ClassVar[str] = "task_class_id"
+    target_label            : ClassVar[str] = "Supportive_Information"
+    target_id_field         : ClassVar[str] = "si_id"
+    provides_id             : str
+    task_class_id           : str
+    si_id                   : str        
+
+class OFFERS(BaseModel):
+    label                   : ClassVar[str] = "offers"
+    label_id                : ClassVar[str] = "offers_id"
+    source_label            : ClassVar[str] = "Task_Class"
+    source_id_field         : ClassVar[str] = "task_class_id"
+    target_label            : ClassVar[str] = "Procedural_Information"
+    target_id_field         : ClassVar[str] = "pi_id"
+    offers_id               : str
+    task_class_id           : str
+    pi_id                   : str    
+
+class INCLUDES(BaseModel):
+    label                   : ClassVar[str] = "includes"
+    label_id                : ClassVar[str] = "includes_id"
+    source_label            : ClassVar[str] = "Task_Class"
+    source_id_field         : ClassVar[str] = "task_class_id"
+    target_label            : ClassVar[str] = "Part_Task_Practice"
+    target_id_field         : ClassVar[str] = "practice_id"
+    includes_id             : str
+    task_class_id           : str
+    practice_id             : str    
+
+class TACKLED(BaseModel):
+    label                   : ClassVar[str] = "tackled"
+    label_id                : ClassVar[str] = "tackled_id"
+    source_label            : ClassVar[str] = "Learning_Session"
+    source_id_field         : ClassVar[str] = "session_id"
+    target_label            : ClassVar[str] = "Learning_Task"
+    target_id_field         : ClassVar[str] = "task_id"
+    tackled_id              : str
+    session_id              : str
+    task_id                 : str     
+    start_time              : str
+    end_time                : str
+    
+class REVIEWED(BaseModel):
+    label                   : ClassVar[str] = "reviewed"
+    label_id                : ClassVar[str] = "reviewed_id"
+    source_label            : ClassVar[str] = "Learning_Session"
+    source_id_field         : ClassVar[str] = "session_id"
+    target_label            : ClassVar[str] = "Supportive_Information"
+    target_id_field         : ClassVar[str] = "si_id"
+    reviewed_id             : str
+    session_id              : str
+    si_id                   : str     
+    start_time              : str
+    end_time                : str
+    time_spent              : str
+    completion_time         : str
+    
+class CONSULTED(BaseModel):
+    label                   : ClassVar[str] = "consulted"
+    label_id                : ClassVar[str] = "consulted_id"
+    source_label            : ClassVar[str] = "Learning_Session"
+    source_id_field         : ClassVar[str] = "session_id"
+    target_label            : ClassVar[str] = "Procedural_Information"
+    target_id_field         : ClassVar[str] = "pi_id"
+    consulted_id            : str
+    session_id              : str
+    pi_id                   : str     
+    start_time              : str
+    end_time                : str
+    time_spent              : str
+    completion_time         : str
+    
+class STUDIED(BaseModel):
+    label                   : ClassVar[str] = "studied"
+    label_id                : ClassVar[str] = "studied_id"
+    source_label            : ClassVar[str] = "Student"
+    source_id_field         : ClassVar[str] = "student_id"
+    target_label            : ClassVar[str] = "Learning_Session"
+    target_id_field         : ClassVar[str] = "session_id"
+    studied_id              : str
+    student_id              : str
+    session_id              : str     
+    start_time              : str
+    end_time                : str
+    duration                : str
+    
+class FINISHED(BaseModel):
+    label                   : ClassVar[str] = "finished"
+    label_id                : ClassVar[str] = "finished_id"
+    source_label            : ClassVar[str] = "Student"
+    source_id_field         : ClassVar[str] = "student_id"
+    target_label            : ClassVar[str] = "Learning_Task"
+    target_id_field         : ClassVar[str] = "task_id"
+    finished_id             : str
+    student_id              : str
+    task_id                 : str     
+    completion_time         : str
+    completion_type         : str
+    score                   : str
+ 
+class CUES(BaseModel):
+    label                   : ClassVar[str] = "cues"
+    label_id                : ClassVar[str] = "cues_id"
+    source_label            : ClassVar[str] = "Learning_Task"
+    source_id_field         : ClassVar[str] = "task_id"
+    target_label            : ClassVar[str] = "Procedural_Information"
+    target_id_field         : ClassVar[str] = "pi_id"
+    cues_id                 : str
+    task_id                 : str
+    pi_id                   : str
+    
+class REFERENCES(BaseModel):
+    label                   : ClassVar[str] = "references"
+    label_id                : ClassVar[str] = "references_id"
+    source_label            : ClassVar[str] = "Learning_Task"
+    source_id_field         : ClassVar[str] = "task_id"
+    target_label            : ClassVar[str] = "Supportive_Information"
+    target_id_field         : ClassVar[str] = "si_id"
+    references_id           : str
+    task_id                 : str
+    si_id                   : str
+    
+class REHEARSES(BaseModel):
+    label                   : ClassVar[str] = "rehearses"
+    label_id                : ClassVar[str] = "rehearses_id"
+    source_label            : ClassVar[str] = "Part_Task_Practice"
+    source_id_field         : ClassVar[str] = "practice_id"
+    target_label            : ClassVar[str] = "Procedural_Information"
+    target_id_field         : ClassVar[str] = "pi_id"
+    rehearses_id            : str
+    pi_id                   : str
+    practice_id             : str
+ 
+    

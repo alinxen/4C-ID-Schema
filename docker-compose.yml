@@ -1,0 +1,37 @@
+services:
+  graph-db:
+    image: neo4j:latest
+    container_name: 4cid-schema-neo4j                  # Forces Docker to name the running container
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD}             # Tells database the username and the password from your local .env
+      - NEO4J_server_default__listen__address=0.0.0.0  # Accept connections from any IP address, not just localhost
+      - NEO4J_server_bolt_enabled=true                 # Turns on the Bolt protocol
+      - NEO4J_server_bolt_listen__address=0.0.0.0:7687 # Tells the Bolt protocol to listen on port 7687
+      - NEO4J_server_http_enabled=true                 # Turns on the web-based Neo4j Browser GUI
+      - NEO4J_server_http_listen__address=0.0.0.0:7474 # Tells the HTTP GUI to listen on port 7474
+      - NEO4J_dbms_directories_plugins=plugins         # Tells Neo4j where to look for plugin files
+      - NEO4J_PLUGINS=["graph-data-science"]           # Automatically download and install GDS
+      - NEO4J_dbms_security_procedures_unrestricted=gds.* # Grants the GDS plugin full access to the database
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      # Persist database data locally so you don't lose it on container restart
+      - ./docker_data/data:/data
+      - ./docker_data/logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  neo4j-pipeline:
+    build: .
+    depends_on:
+      graph-db:                                        # Tells Docker to start the database first
+        condition: service_healthy                     # Waits for healthcheck, aka until Neo4j is actually running
+    environment:
+      - NEO4J_URI=bolt://graph-db:7687                 # Matches the service name above
+      - NEO4J_USER=neo4j                               # Passes the username so database.py finds it
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}               # Passes the password so database.py finds it
