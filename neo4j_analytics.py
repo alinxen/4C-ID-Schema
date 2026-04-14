@@ -1,25 +1,41 @@
-from neomodel import db  # <-- Import 'db' instead of 'config'
-db._NODE_CLASS_REGISTRY.clear()
+from neomodel import db
+
+# Clear registry for interactive environments like Spyder/Jupyter
+if hasattr(db, '_NODE_CLASS_REGISTRY'):
+    db._NODE_CLASS_REGISTRY.clear()
 
 from src.analytics.config import NeomodelManager
-from src.analytics.models import Skill
+from src.analytics.models import Skill, RequiresSRel
+
+
+def cool_things_that_neomodel_can_do():
+    # Returns a list of 'Skill' Python objects
+    all_skills = Skill.nodes.all() 
+    for skill in all_skills:
+        print(skill.skill_id)
+    
+    # List all properties of one node
+    one_skill = Skill.nodes.get(skill_id="SDSRM11")
+    print(one_skill.__properties__)
+    print(one_skill.skill_title)
+
+    # List edges and edge properties
+    two_skill = Skill.nodes.get(skill_id="SDSBA14")
+
+    # Get all nodes connected by the 'REQUIRES' edge
+    prerequisite_skills = two_skill.RequiresRel.all()
+
+    for prereq in prerequisite_skills:
+        print(f"Python requires: {prereq.name}")
+
+
 
 
 def main():
     # 1. Initialize neomodel before querying
-    NeomodelManager.connect_neomodel
-    try:
-            print('Fetching skills...')
-
-            # This will now work because setup_neomodel() provided the credentials
-            all_skills = Skill.nodes.all()
-
-            print(f"Found {len(all_skills)} skills.")
-            for skill in all_skills:
-                print(f"ID: {skill.skill_id} | Title: {skill.skill_title}")
-
-    except Exception as e:
-            print(f"An error occurred: {e}")
+    manager = NeomodelManager()
+    manager.connect_neomodel()
+    cool_things_that_neomodel_can_do()
 
 
 # Create helper function such as get all nodes of type or get all skills of type

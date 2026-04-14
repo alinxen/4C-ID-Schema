@@ -53,6 +53,18 @@ class FinishedRel(StructuredRel):
     completion_type = StringProperty()
     score = StringProperty()
 
+class DevelopsRel(StructuredRel):
+    develops_id = StringProperty(unique_index=True)
+
+class RequiresSRel(StructuredRel):
+    requires_s_id = StringProperty(unique_index=True)
+
+class RequiresKRel(StructuredRel):
+    requires_k_id = StringProperty(unique_index=True)
+
+class GenericIdRel(StructuredRel):
+    """Can be used for cues, references, groups, provides, offers, includes, rehearses"""
+    rel_id = StringProperty(unique_index=True)
 
 # =================================================
 # 2. NODE MODELS
@@ -78,10 +90,9 @@ class Competence(StructuredNode):
     competence_title = StringProperty()
     competence_group_id = StringProperty()
     competence_group = StringProperty()
-    
-    # Relationships
-    requires_skills = RelationshipTo('Skill', 'requires_s')
-    requires_knowledge = RelationshipTo('Knowledge', 'requires_k')
+
+    requires_skills = RelationshipTo('Skill', 'requires_s', model=RequiresSRel)
+    requires_knowledge = RelationshipTo('Knowledge', 'requires_k', model=RequiresKRel)
 
 class SupportiveInformation(StructuredNode):
     __label__ = "Supportive_Information"
@@ -111,11 +122,11 @@ class LearningTask(StructuredNode):
     task_type = StringProperty()
     
     # Relationships
-    develops = RelationshipTo('Competence', 'develops')
+    develops = RelationshipTo('Competence', 'develops', model=DevelopsRel)
     practices = RelationshipTo('Skill', 'practices', model=PracticesRel)
     applies = RelationshipTo('Knowledge', 'applies', model=AppliesRel)
-    cues = RelationshipTo('ProceduralInformation', 'cues')
-    references = RelationshipTo('SupportiveInformation', 'references')
+    cues = RelationshipTo('ProceduralInformation', 'cues', model=GenericIdRel)
+    references = RelationshipTo('SupportiveInformation', 'references', model=GenericIdRel)
 
 class TaskClass(StructuredNode):
     __label__ = "Task_Class"

@@ -1,0 +1,173 @@
+{
+  "style": {
+    "font-family": "sans-serif",
+    "background-color": "#ffffff",
+    "background-image": "",
+    "background-size": "100%",
+    "node-color": "#ffffff",
+    "border-width": 4,
+    "border-color": "#000000",
+    "radius": 50,
+    "node-padding": 5,
+    "node-margin": 2,
+    "outside-position": "auto",
+    "node-icon-image": "",
+    "node-background-image": "",
+    "icon-position": "inside",
+    "icon-size": 64,
+    "caption-position": "inside",
+    "caption-max-width": 200,
+    "caption-color": "#000000",
+    "caption-font-size": 50,
+    "caption-font-weight": "normal",
+    "label-position": "inside",
+    "label-display": "pill",
+    "label-color": "#000000",
+    "label-background-color": "#ffffff",
+    "label-border-color": "#000000",
+    "label-border-width": 4,
+    "label-font-size": 40,
+    "label-padding": 5,
+    "label-margin": 4,
+    "directionality": "directed",
+    "detail-position": "inline",
+    "detail-orientation": "parallel",
+    "arrow-width": 5,
+    "arrow-color": "#000000",
+    "margin-start": 5,
+    "margin-end": 5,
+    "margin-peer": 20,
+    "attachment-start": "normal",
+    "attachment-end": "normal",
+    "relationship-icon-image": "",
+    "type-color": "#000000",
+    "type-background-color": "#ffffff",
+    "type-border-color": "#000000",
+    "type-border-width": 0,
+    "type-font-size": 16,
+    "type-padding": 5,
+    "property-position": "outside",
+    "property-alignment": "colon",
+    "property-color": "#000000",
+    "property-font-size": 16,
+    "property-font-weight": "normal"
+  },
+  "nodes": [
+    {
+      "id": "n0",
+      "position": {
+        "x": 150,
+        "y": 267.9019377651083
+      },
+      "caption": "A1",
+      "labels": [
+        "Learning_Task"
+      ],
+      "properties": {
+        "task_id": "A1",
+        "task_title": "Datenimport",
+        "task_type": "Fill in the Blanks"
+      },
+      "style": {
+        "caption-position": "inside",
+        "label-position": "inside",
+        "label-display": "pill",
+        "label-margin": 12,
+        "label-font-size": 22,
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "caption-font-size": 65,
+        "outside-position": "top"
+      }
+    },
+    {
+      "id": "n1",
+      "position": {
+        "x": 463.659464239605,
+        "y": 267.90193776510836
+      },
+      "caption": "Tom",
+      "labels": [
+        "Student"
+      ],
+      "properties": {
+        "student_id": "10",
+        "username": "tom_poth",
+        "firstname": "Tom",
+        "lastname": "Poth"
+      },
+      "style": {
+        "caption-position": "inside",
+        "label-position": "inside",
+        "label-display": "pill",
+        "label-margin": 12,
+        "label-font-size": 22,
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "caption-font-size": 65,
+        "outside-position": "top"
+      }
+    },
+    {
+      "id": "n2",
+      "position": {
+        "x": 777.31892847921,
+        "y": 267.9019377651083
+      },
+      "caption": "A4",
+      "labels": [
+        "Learning_Task"
+      ],
+      "properties": {
+        "task_id": "A4",
+        "task_title": "Heatmap",
+        "task_type": "Drag the words"
+      },
+      "style": {
+        "caption-position": "inside",
+        "label-position": "inside",
+        "label-display": "pill",
+        "label-margin": 12,
+        "label-font-size": 22,
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "caption-font-size": 65,
+        "outside-position": "top"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "id": "n0",
+      "type": "FINISHED",
+      "style": {
+        "detail-position": "below",
+        "detail-orientation": "horizontal",
+        "property-position": "outside",
+        "property-alignment": "center"
+      },
+      "properties": {
+        "score": "8.3",
+        "finished_id": "fin_10_A4"
+      },
+      "fromId": "n1",
+      "toId": "n2"
+    },
+    {
+      "id": "n2",
+      "type": "FINISHED",
+      "style": {
+        "detail-position": "below",
+        "detail-orientation": "horizontal",
+        "property-position": "outside",
+        "property-alignment": "colon"
+      },
+      "properties": {
+        "score": "9.1",
+        "time": "16:05:39"
+      },
+      "fromId": "n1",
+      "toId": "n0"
+    }
+  ]
+}

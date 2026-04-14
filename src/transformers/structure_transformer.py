@@ -1,5 +1,5 @@
 import pandas as pd
-from src.schema import GROUPS, PROVIDES, OFFERS, INCLUDES, CUES, REFERENCES, REHEARSES
+from src.schema import GROUPS, PROVIDES, OFFERS, INCLUDES, CUES, REFERENCES, TRAINS
 from src.config import COURSE_CSV_PATH
 
 
@@ -66,14 +66,14 @@ class ReferencesTransformer():
         ]
         return validated_data  
     
-class RehearsesTransformer():
+class TrainsTransformer():
     def execute(self):
         df = pd.read_csv(COURSE_CSV_PATH, usecols=['practice_id', 'pi_id'])
         df = df.dropna(subset=['practice_id']).reset_index(drop=True)
-        df['rehearses_id'] = [f"reh_{i}" for i in range(1, len(df) + 1)]
+        df['trains_id'] = [f"tra_{i}" for i in range(1, len(df) + 1)]
         
         validated_data = [
-            REHEARSES(**row).model_dump() 
+            TRAINS(**row).model_dump() 
             for row in df.to_dict(orient='records')
         ]
         

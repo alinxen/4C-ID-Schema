@@ -69,7 +69,7 @@ EDGE_PIPELINE = [
     ("FINISHED",            tf.FinishedTransformer),
     ("CUES",                tf.CuesTransformer),
     ("REFERENCES",          tf.ReferencesTransformer),
-    ("REHEARSES",           tf.RehearsesTransformer)
+    ("TRAINS",              tf.TrainsTransformer)
     ]
 
 

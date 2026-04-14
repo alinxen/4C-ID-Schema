@@ -62,11 +62,10 @@ class LEARNING_SESSION(BaseModel):
     start_time              : str
     end_time                : str
     student_id              : int
-    rds_ID                  : str
     
 class STUDENT(BaseModel):
     label                   : ClassVar[str] = "Student"
-    student_id              : str  = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    student_id              : int  = Field(..., json_schema_extra={"is_unique_neo4j": True})
     username                : str 
     firstname               : str 
     lastname                : str 
@@ -77,7 +76,7 @@ class STUDENT(BaseModel):
 # -------------------------------------------------    
     
 class DEVELOPS_COMPETENCE(BaseModel):
-    label                   : ClassVar[str] = "develops"
+    label                   : ClassVar[str] = "DEVELOPS"
     label_id                : ClassVar[str] = "develops_id"
     source_label            : ClassVar[str] = "Learning_Task"
     source_id_field         : ClassVar[str] = "task_id"
@@ -88,7 +87,7 @@ class DEVELOPS_COMPETENCE(BaseModel):
     competence_id           : str
 
 class PRACTICES_SKILL(BaseModel):
-    label                   : ClassVar[str] = "practices"
+    label                   : ClassVar[str] = "PRACTICES"
     label_id                : ClassVar[str] = "practices_id"
     source_label            : ClassVar[str] = "Learning_Task"
     source_id_field         : ClassVar[str] = "task_id"
@@ -100,7 +99,7 @@ class PRACTICES_SKILL(BaseModel):
     cognitive_dimension     : str
     
 class APPLIES_KNOWLEDGE(BaseModel):
-    label                   : ClassVar[str] = "applies"
+    label                   : ClassVar[str] = "APPLIES"
     label_id                : ClassVar[str] = "applies_id"
     source_label            : ClassVar[str] = "Learning_Task"
     source_id_field         : ClassVar[str] = "task_id"
@@ -112,7 +111,7 @@ class APPLIES_KNOWLEDGE(BaseModel):
     knowledge_dimension     : str    
     
 class ATTEMPTED(BaseModel):
-    label                   : ClassVar[str] = "attempted"
+    label                   : ClassVar[str] = "ATTEMPTED"
     label_id                : ClassVar[str] = "attempted_id"
     source_label            : ClassVar[str] = "Student"
     source_id_field         : ClassVar[str] = "student_id"
@@ -128,7 +127,7 @@ class ATTEMPTED(BaseModel):
     student_id              : str
     
 class REQUIRES_SKILL(BaseModel):
-    label                   : ClassVar[str] = "requires_s"
+    label                   : ClassVar[str] = "REQUIRES_S"
     label_id                : ClassVar[str] = "requires_s_id"
     source_label            : ClassVar[str] = "Competence"
     source_id_field         : ClassVar[str] = "competence_id"
@@ -139,7 +138,7 @@ class REQUIRES_SKILL(BaseModel):
     skill_id                : str    
     
 class REQUIRES_KNOWLEDGE(BaseModel):
-    label                   : ClassVar[str] = "requires_k"
+    label                   : ClassVar[str] = "REQUIRES_K"
     label_id                : ClassVar[str] = "requires_k_id"
     source_label            : ClassVar[str] = "Competence"
     source_id_field         : ClassVar[str] = "competence_id"
@@ -150,7 +149,7 @@ class REQUIRES_KNOWLEDGE(BaseModel):
     knowledge_id            : str    
     
 class GROUPS(BaseModel):
-    label                   : ClassVar[str] = "groups"
+    label                   : ClassVar[str] = "GROUPS"
     label_id                : ClassVar[str] = "groups_id"
     source_label            : ClassVar[str] = "Task_Class"
     source_id_field         : ClassVar[str] = "task_class_id"
@@ -161,7 +160,7 @@ class GROUPS(BaseModel):
     task_id                 : str        
     
 class PROVIDES(BaseModel):
-    label                   : ClassVar[str] = "provides"
+    label                   : ClassVar[str] = "PROVIDES"
     label_id                : ClassVar[str] = "provides_id"
     source_label            : ClassVar[str] = "Task_Class"
     source_id_field         : ClassVar[str] = "task_class_id"
@@ -172,7 +171,7 @@ class PROVIDES(BaseModel):
     si_id                   : str        
 
 class OFFERS(BaseModel):
-    label                   : ClassVar[str] = "offers"
+    label                   : ClassVar[str] = "OFFERS"
     label_id                : ClassVar[str] = "offers_id"
     source_label            : ClassVar[str] = "Task_Class"
     source_id_field         : ClassVar[str] = "task_class_id"
@@ -183,7 +182,7 @@ class OFFERS(BaseModel):
     pi_id                   : str    
 
 class INCLUDES(BaseModel):
-    label                   : ClassVar[str] = "includes"
+    label                   : ClassVar[str] = "INCLUDES"
     label_id                : ClassVar[str] = "includes_id"
     source_label            : ClassVar[str] = "Task_Class"
     source_id_field         : ClassVar[str] = "task_class_id"
@@ -194,7 +193,7 @@ class INCLUDES(BaseModel):
     practice_id             : str    
 
 class TACKLED(BaseModel):
-    label                   : ClassVar[str] = "tackled"
+    label                   : ClassVar[str] = "TACKLED"
     label_id                : ClassVar[str] = "tackled_id"
     source_label            : ClassVar[str] = "Learning_Session"
     source_id_field         : ClassVar[str] = "session_id"
@@ -207,7 +206,7 @@ class TACKLED(BaseModel):
     end_time                : str
     
 class REVIEWED(BaseModel):
-    label                   : ClassVar[str] = "reviewed"
+    label                   : ClassVar[str] = "REVIEWED"
     label_id                : ClassVar[str] = "reviewed_id"
     source_label            : ClassVar[str] = "Learning_Session"
     source_id_field         : ClassVar[str] = "session_id"
@@ -222,7 +221,7 @@ class REVIEWED(BaseModel):
     completion_time         : str
     
 class CONSULTED(BaseModel):
-    label                   : ClassVar[str] = "consulted"
+    label                   : ClassVar[str] = "CONSULTED"
     label_id                : ClassVar[str] = "consulted_id"
     source_label            : ClassVar[str] = "Learning_Session"
     source_id_field         : ClassVar[str] = "session_id"
@@ -237,7 +236,7 @@ class CONSULTED(BaseModel):
     completion_time         : str
     
 class STUDIED(BaseModel):
-    label                   : ClassVar[str] = "studied"
+    label                   : ClassVar[str] = "STUDIED"
     label_id                : ClassVar[str] = "studied_id"
     source_label            : ClassVar[str] = "Student"
     source_id_field         : ClassVar[str] = "student_id"
@@ -251,7 +250,7 @@ class STUDIED(BaseModel):
     duration                : str
     
 class FINISHED(BaseModel):
-    label                   : ClassVar[str] = "finished"
+    label                   : ClassVar[str] = "FINISHED"
     label_id                : ClassVar[str] = "finished_id"
     source_label            : ClassVar[str] = "Student"
     source_id_field         : ClassVar[str] = "student_id"
@@ -265,7 +264,7 @@ class FINISHED(BaseModel):
     score                   : str
  
 class CUES(BaseModel):
-    label                   : ClassVar[str] = "cues"
+    label                   : ClassVar[str] = "CUES"
     label_id                : ClassVar[str] = "cues_id"
     source_label            : ClassVar[str] = "Learning_Task"
     source_id_field         : ClassVar[str] = "task_id"
@@ -276,7 +275,7 @@ class CUES(BaseModel):
     pi_id                   : str
     
 class REFERENCES(BaseModel):
-    label                   : ClassVar[str] = "references"
+    label                   : ClassVar[str] = "REFERENCES"
     label_id                : ClassVar[str] = "references_id"
     source_label            : ClassVar[str] = "Learning_Task"
     source_id_field         : ClassVar[str] = "task_id"
@@ -286,14 +285,14 @@ class REFERENCES(BaseModel):
     task_id                 : str
     si_id                   : str
     
-class REHEARSES(BaseModel):
-    label                   : ClassVar[str] = "rehearses"
-    label_id                : ClassVar[str] = "rehearses_id"
+class TRAINS(BaseModel):
+    label                   : ClassVar[str] = "TRAINS"
+    label_id                : ClassVar[str] = "trains_id"
     source_label            : ClassVar[str] = "Part_Task_Practice"
     source_id_field         : ClassVar[str] = "practice_id"
     target_label            : ClassVar[str] = "Procedural_Information"
     target_id_field         : ClassVar[str] = "pi_id"
-    rehearses_id            : str
+    trains_id               : str
     pi_id                   : str
     practice_id             : str
  

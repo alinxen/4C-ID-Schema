@@ -1,0 +1,617 @@
+{
+  "style": {
+    "font-family": "sans-serif",
+    "background-color": "#ffffff",
+    "background-image": "",
+    "background-size": "100%",
+    "node-color": "#ffffff",
+    "border-width": 2,
+    "border-color": "#000000",
+    "radius": 10,
+    "node-padding": 5,
+    "node-margin": 2,
+    "outside-position": "auto",
+    "node-icon-image": "",
+    "node-background-image": "",
+    "icon-position": "inside",
+    "icon-size": 64,
+    "caption-position": "outside",
+    "caption-max-width": 200,
+    "caption-color": "#000000",
+    "caption-font-size": 10,
+    "caption-font-weight": "normal",
+    "label-position": "outside",
+    "label-display": "pill",
+    "label-color": "#000000",
+    "label-background-color": "#ffffff",
+    "label-border-color": "#000000",
+    "label-border-width": 2,
+    "label-font-size": 10,
+    "label-padding": 1,
+    "label-margin": 4,
+    "directionality": "undirected",
+    "detail-position": "inline",
+    "detail-orientation": "parallel",
+    "arrow-width": 2,
+    "arrow-color": "#000000",
+    "margin-start": 0,
+    "margin-end": 0,
+    "margin-peer": 20,
+    "attachment-start": "normal",
+    "attachment-end": "normal",
+    "relationship-icon-image": "",
+    "type-color": "#000000",
+    "type-background-color": "#ffffff",
+    "type-border-color": "#000000",
+    "type-border-width": 0,
+    "type-font-size": 10,
+    "type-padding": 5,
+    "property-position": "outside",
+    "property-alignment": "colon",
+    "property-color": "#000000",
+    "property-font-size": 10,
+    "property-font-weight": "normal"
+  },
+  "nodes": [
+    {
+      "id": "n0",
+      "position": {
+        "x": 642.7700285531625,
+        "y": 227.35487971020257
+      },
+      "caption": "Student",
+      "labels": [],
+      "properties": {},
+      "style": {
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "border-color": "#cccccc",
+        "node-padding": 0,
+        "node-margin": 1,
+        "caption-position": "inside",
+        "caption-font-weight": "normal",
+        "radius": 40,
+        "caption-font-size": 14
+      }
+    },
+    {
+      "id": "n1",
+      "position": {
+        "x": 642.7700285531625,
+        "y": 444.70975942040513
+      },
+      "caption": "Learning Session",
+      "labels": [],
+      "properties": {},
+      "style": {
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "border-color": "#cccccc",
+        "node-padding": 0,
+        "node-margin": 1,
+        "caption-position": "inside",
+        "caption-font-weight": "normal",
+        "radius": 40,
+        "caption-font-size": 14,
+        "outside-position": "left",
+        "property-font-size": 15,
+        "property-color": "#000000"
+      }
+    },
+    {
+      "id": "n2",
+      "position": {
+        "x": 957.6608973579002,
+        "y": 324.8908688047376
+      },
+      "caption": "Supportive Information",
+      "labels": [],
+      "properties": {},
+      "style": {
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "border-color": "#cccccc",
+        "node-padding": 0,
+        "node-margin": 1,
+        "caption-position": "inside",
+        "caption-font-weight": "normal",
+        "radius": 40,
+        "caption-font-size": 14
+      }
+    },
+    {
+      "id": "n3",
+      "position": {
+        "x": 222.41405942549727,
+        "y": 230.0178390582668
+      },
+      "caption": "Learning Task",
+      "labels": [],
+      "properties": {},
+      "style": {
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "border-color": "#cccccc",
+        "node-padding": 0,
+        "node-margin": 1,
+        "caption-position": "inside",
+        "caption-font-weight": "normal",
+        "radius": 40,
+        "caption-font-size": 14
+      }
+    },
+    {
+      "id": "n4",
+      "position": {
+        "x": 957.6608973579002,
+        "y": 129.81889061566756
+      },
+      "caption": "Procedural Information",
+      "labels": [],
+      "properties": {},
+      "style": {
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "border-color": "#cccccc",
+        "node-padding": 0,
+        "node-margin": 1,
+        "caption-position": "inside",
+        "caption-font-weight": "normal",
+        "radius": 40,
+        "caption-font-size": 14
+      }
+    },
+    {
+      "id": "n5",
+      "position": {
+        "x": 642.7700285531625,
+        "y": 10
+      },
+      "caption": "Task Class",
+      "labels": [],
+      "properties": {},
+      "style": {
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "border-color": "#cccccc",
+        "node-padding": 0,
+        "node-margin": 1,
+        "caption-position": "inside",
+        "caption-font-weight": "normal",
+        "radius": 40,
+        "caption-font-size": 14
+      }
+    },
+    {
+      "id": "n6",
+      "position": {
+        "x": 222.41405942549727,
+        "y": 444.70975942040513
+      },
+      "caption": "Knowledge",
+      "labels": [],
+      "properties": {},
+      "style": {
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "border-color": "#cccccc",
+        "node-padding": 0,
+        "node-margin": 1,
+        "caption-position": "inside",
+        "caption-font-weight": "normal",
+        "radius": 40,
+        "caption-font-size": 14
+      }
+    },
+    {
+      "id": "n7",
+      "position": {
+        "x": 222.41405942549727,
+        "y": 15.32591869612844
+      },
+      "caption": "Skill",
+      "labels": [],
+      "properties": {},
+      "style": {
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "border-color": "#cccccc",
+        "node-padding": 0,
+        "node-margin": 1,
+        "caption-position": "inside",
+        "caption-font-weight": "normal",
+        "radius": 40,
+        "caption-font-size": 14
+      }
+    },
+    {
+      "id": "n8",
+      "position": {
+        "x": 15,
+        "y": 227.35487971020257
+      },
+      "caption": "Competence",
+      "labels": [],
+      "properties": {},
+      "style": {
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "border-color": "#cccccc",
+        "node-padding": 0,
+        "node-margin": 1,
+        "caption-position": "inside",
+        "caption-font-weight": "normal",
+        "radius": 40,
+        "caption-font-size": 14
+      }
+    },
+    {
+      "id": "n9",
+      "position": {
+        "x": 837.8420067422328,
+        "y": 10
+      },
+      "caption": "Part Task Practice",
+      "labels": [],
+      "properties": {},
+      "style": {
+        "border-color": "#cccccc",
+        "property-font-weight": "normal",
+        "property-alignment": "colon",
+        "property-position": "outside",
+        "caption-position": "inside",
+        "node-padding": 0,
+        "radius": 40,
+        "caption-font-size": 14,
+        "caption-font-weight": "normal"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "id": "n0",
+      "fromId": "n3",
+      "toId": "n2",
+      "type": "REFERENCES",
+      "properties": {},
+      "style": {
+        "attachment-start": "bottom",
+        "attachment-end": "normal",
+        "arrow-color": "#999999",
+        "detail-orientation": "parallel",
+        "detail-position": "inline",
+        "property-font-weight": "normal",
+        "property-alignment": "colon",
+        "property-position": "outside",
+        "type-font-size": 13,
+        "type-background-color": "#ffffff",
+        "directionality": "directed"
+      }
+    },
+    {
+      "id": "n1",
+      "fromId": "n3",
+      "toId": "n4",
+      "type": "CUES",
+      "properties": {},
+      "style": {
+        "attachment-start": "top",
+        "attachment-end": "normal",
+        "margin-peer": 18,
+        "arrow-color": "#999999",
+        "property-font-weight": "normal",
+        "property-alignment": "colon",
+        "property-position": "outside",
+        "detail-position": "inline",
+        "detail-orientation": "parallel",
+        "type-font-size": 13,
+        "type-background-color": "#ffffff",
+        "directionality": "directed"
+      }
+    },
+    {
+      "id": "n2",
+      "fromId": "n0",
+      "toId": "n1",
+      "type": "STUDIED",
+      "properties": {},
+      "style": {
+        "type-font-size": 13,
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "detail-position": "inline",
+        "detail-orientation": "parallel",
+        "arrow-color": "#000000",
+        "type-background-color": "#ffffff",
+        "directionality": "directed"
+      }
+    },
+    {
+      "id": "n3",
+      "fromId": "n1",
+      "toId": "n4",
+      "type": "CONSULTED",
+      "properties": {},
+      "style": {
+        "type-font-size": 13,
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "detail-position": "inline",
+        "detail-orientation": "parallel",
+        "arrow-color": "#000000",
+        "type-background-color": "#ffffff",
+        "directionality": "directed"
+      }
+    },
+    {
+      "id": "n4",
+      "fromId": "n1",
+      "toId": "n2",
+      "type": "REVIEWED",
+      "properties": {},
+      "style": {
+        "type-font-size": 13,
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "detail-position": "inline",
+        "detail-orientation": "parallel",
+        "arrow-color": "#000000",
+        "type-background-color": "#ffffff",
+        "directionality": "directed"
+      }
+    },
+    {
+      "id": "n5",
+      "fromId": "n1",
+      "toId": "n3",
+      "type": "TACKLED",
+      "properties": {},
+      "style": {
+        "type-font-size": 13,
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "detail-position": "inline",
+        "detail-orientation": "parallel",
+        "arrow-color": "#000000",
+        "type-background-color": "#ffffff",
+        "directionality": "directed"
+      }
+    },
+    {
+      "id": "n6",
+      "fromId": "n0",
+      "toId": "n3",
+      "type": "ATTEMPTED",
+      "properties": {},
+      "style": {
+        "property-position": "outside",
+        "attachment-start": "top",
+        "attachment-end": "normal",
+        "type-font-size": 13,
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "detail-position": "inline",
+        "detail-orientation": "parallel",
+        "arrow-color": "#000000",
+        "type-background-color": "#ffffff",
+        "margin-start": 0,
+        "directionality": "directed"
+      }
+    },
+    {
+      "id": "n7",
+      "fromId": "n3",
+      "toId": "n8",
+      "type": "DEVELOPS",
+      "properties": {},
+      "style": {
+        "type-font-size": 13,
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "detail-position": "inline",
+        "detail-orientation": "parallel",
+        "arrow-color": "#000000",
+        "type-background-color": "#ffffff",
+        "directionality": "directed"
+      }
+    },
+    {
+      "id": "n8",
+      "fromId": "n8",
+      "toId": "n7",
+      "type": "REQUIRES_S",
+      "properties": {},
+      "style": {
+        "type-font-size": 13,
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "detail-position": "inline",
+        "detail-orientation": "parallel",
+        "arrow-color": "#000000",
+        "type-background-color": "#ffffff",
+        "directionality": "directed"
+      }
+    },
+    {
+      "id": "n9",
+      "fromId": "n8",
+      "toId": "n6",
+      "type": "REQUIRES_K",
+      "properties": {},
+      "style": {
+        "type-font-size": 13,
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "detail-position": "inline",
+        "detail-orientation": "parallel",
+        "arrow-color": "#000000",
+        "type-background-color": "#ffffff",
+        "directionality": "directed"
+      }
+    },
+    {
+      "id": "n10",
+      "fromId": "n3",
+      "toId": "n6",
+      "type": "APPLIES",
+      "properties": {},
+      "style": {
+        "type-font-size": 13,
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "detail-position": "inline",
+        "detail-orientation": "parallel",
+        "arrow-color": "#000000",
+        "type-background-color": "#ffffff",
+        "directionality": "directed"
+      }
+    },
+    {
+      "id": "n11",
+      "fromId": "n3",
+      "toId": "n7",
+      "type": "PRACTICES",
+      "properties": {},
+      "style": {
+        "type-font-size": 13,
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "detail-position": "inline",
+        "detail-orientation": "parallel",
+        "arrow-color": "#000000",
+        "type-background-color": "#ffffff",
+        "directionality": "directed"
+      }
+    },
+    {
+      "id": "n12",
+      "fromId": "n5",
+      "toId": "n3",
+      "type": "GROUPS",
+      "properties": {},
+      "style": {
+        "type-font-size": 13,
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "detail-position": "inline",
+        "detail-orientation": "parallel",
+        "arrow-color": "#000000",
+        "type-background-color": "#ffffff",
+        "directionality": "directed"
+      }
+    },
+    {
+      "id": "n13",
+      "fromId": "n5",
+      "toId": "n4",
+      "type": "OFFERS",
+      "properties": {},
+      "style": {
+        "type-font-size": 13,
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "detail-position": "inline",
+        "detail-orientation": "parallel",
+        "arrow-color": "#000000",
+        "type-background-color": "#ffffff",
+        "directionality": "directed"
+      }
+    },
+    {
+      "id": "n14",
+      "fromId": "n5",
+      "toId": "n2",
+      "type": "PROVIDES",
+      "properties": {},
+      "style": {
+        "type-font-size": 13,
+        "property-position": "outside",
+        "property-alignment": "colon",
+        "property-font-weight": "normal",
+        "detail-position": "inline",
+        "detail-orientation": "parallel",
+        "arrow-color": "#000000",
+        "type-background-color": "#ffffff",
+        "directionality": "directed"
+      }
+    },
+    {
+      "id": "n15",
+      "fromId": "n9",
+      "toId": "n4",
+      "type": "TRAINS",
+      "properties": {},
+      "style": {
+        "property-font-weight": "normal",
+        "property-alignment": "colon",
+        "property-position": "outside",
+        "detail-position": "inline",
+        "detail-orientation": "parallel",
+        "type-font-size": 13,
+        "arrow-color": "#000000",
+        "type-background-color": "#ffffff",
+        "directionality": "directed"
+      }
+    },
+    {
+      "id": "n16",
+      "fromId": "n0",
+      "toId": "n3",
+      "type": "FINISHED",
+      "properties": {},
+      "style": {
+        "property-alignment": "colon",
+        "attachment-start": "bottom",
+        "margin-peer": 50,
+        "attachment-end": "normal",
+        "type-font-size": 13,
+        "property-position": "outside",
+        "property-font-weight": "normal",
+        "detail-position": "inline",
+        "detail-orientation": "parallel",
+        "arrow-color": "#000000",
+        "type-background-color": "#ffffff",
+        "margin-start": 0,
+        "directionality": "directed"
+      }
+    },
+    {
+      "id": "n17",
+      "fromId": "n5",
+      "toId": "n9",
+      "type": "INCLUDES",
+      "properties": {},
+      "style": {
+        "property-font-weight": "normal",
+        "property-alignment": "colon",
+        "property-position": "outside",
+        "detail-position": "inline",
+        "detail-orientation": "parallel",
+        "arrow-color": "#000000",
+        "type-background-color": "#ffffff",
+        "type-font-size": 13,
+        "directionality": "directed"
+      }
+    }
+  ]
+}
