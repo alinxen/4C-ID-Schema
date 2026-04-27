@@ -1,9 +1,9 @@
 from src.database import GraphDB
+from src.extractors.data_store import DataStore
 from src.loaders.node_loader import load_nodes_to_neo4j
 from src.loaders.edge_loader import load_edges_to_neo4j
 
 import src.transformers as tf
-
 
 
 # -------------------------------------------------------
@@ -77,7 +77,7 @@ EDGE_PIPELINE = [
 
 
 
-def edges_pipeline(db):
+def edges_pipeline(db, data):
     """
     Loads edges into Neo4j
     """
@@ -86,7 +86,10 @@ def edges_pipeline(db):
         for edge_label, TransformerClass in EDGE_PIPELINE:
             
             current_edge = edge_label
-            transformer    = TransformerClass()
+            try:
+                transformer = TransformerClass(data)  # For updated transformers
+            except TypeError:
+                transformer = TransformerClass()       # For old transformers
             validated_data = transformer.execute()
             load_edges_to_neo4j(db.driver, edge_label, validated_data)
     except Exception as e:
@@ -100,12 +103,13 @@ def edges_pipeline(db):
 
 def main():
     db = GraphDB()
+    data = DataStore()
    
     if db.driver is not None:
         try:
             # db.set_constraints()
             nodes_pipeline(db)
-            edges_pipeline(db)
+            edges_pipeline(db, data)
             
             # Print the model!
             # print(DEVELOPS_COMPETENCE.model_json_schema())

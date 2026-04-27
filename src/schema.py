@@ -65,7 +65,7 @@ class LEARNING_SESSION(BaseModel):
     
 class STUDENT(BaseModel):
     label                   : ClassVar[str] = "Student"
-    student_id              : int  = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    student_id              : str  = Field(..., json_schema_extra={"is_unique_neo4j": True})
     username                : str 
     firstname               : str 
     lastname                : str 

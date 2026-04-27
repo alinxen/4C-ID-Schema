@@ -496,7 +496,6 @@ class StudiedTransformer:
                 # Assuming you have a Pydantic model named STUDIED
                 validated_data.append(STUDIED(**record).model_dump())
                 validated_data.append(record)
-
         return validated_data
     
     

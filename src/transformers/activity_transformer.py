@@ -1,42 +1,171 @@
 import pandas as pd
 import json
-from src.schema import ATTEMPTED
-from src.config import LOGFILE_CSV_PATH, XAPI_CSV_PATH, TASK_CSV_PATH, HVP_CSV_PATH
+from src.config import LOGFILE_CSV_PATH, XAPI_CSV_PATH, TASK_CSV_PATH, HVP_CSV_PATH, COURSE_CSV_PATH
+from src.validators.pydantic_validator import PydanticValidator
 
 
-def extract_hotspot_task_ids():
-    """
-    Identifies all tasks that are of the type 'Find Multiple Hotspots'
-    by merging the HVP tasks table with the HVP libraries table.
-    
-    Returns a clean list of task IDs.
-    """
-    
-    tasks_df = pd.read_csv(TASK_CSV_PATH)
-    libraries_df =pd.read_csv(HVP_CSV_PATH)
-    
-    if tasks_df.empty or libraries_df.empty:
-        return []
-
-    # 1. Isolate the necessary columns
-    tasks = tasks_df[['id', 'main_library_id']].copy()
-    
-    libs = libraries_df[['id', 'title']].copy()
-    libs = libs.rename(columns={'id': 'main_library_id'})
-
-    # 2. Merge to connect the task ID with the human-readable library title
-    merged_df = tasks.merge(libs, how="left", on="main_library_id")
-
-    # 3. Filter for Hotspot tasks
-    hotspot_tasks = merged_df[merged_df['title'] == "Find Multiple Hotspots"]
-    
-    # 4. Convert the pandas Series of IDs into a standard Python list
-    hotspot_ids = hotspot_tasks['id'].tolist()
-
-    return hotspot_ids
 
 
 class AttemptedTransformer():
+
+    def __init__(self, data_store):
+        self.data = data_store
+    
+    
+    def _fetch_data(self):
+        """Fetches data and applies initial time corrections to raw data logs."""
+        logfile = self.data.get_csv(
+            LOGFILE_CSV_PATH,
+            columns=['userid', 'eventname', 'other', 'timecreated'])
+        
+        # Apply +1 hour timezone offset
+        logfile['timecreated'] = pd.to_datetime(logfile['timecreated'] + 3600, unit='s')
+        
+        xapi = self.data.get_csv(
+            XAPI_CSV_PATH,
+            columns=['user_id', 'content_id', 'correct_responses_pattern', 'response'])
+           
+        return logfile, xapi
+    
+        
+    def _extract_hotspot_task_ids(self):
+        """
+        Identifies all tasks that are of the type 'Find Multiple Hotspots'
+        by matching the HVP tasks with the HVP libraries.
+        """
+        tasks = self.data.get_csv(TASK_CSV_PATH, columns=['id', 'main_library_id'])
+        libs  = self.data.get_csv(HVP_CSV_PATH,  columns=['id', 'title'])
+        
+        target_lib_ids = libs[libs['title'] == "Find Multiple Hotspots"]['id']
+        hotspot_tasks = tasks[tasks['main_library_id'].isin(target_lib_ids)]
+        
+        return hotspot_tasks['id'].tolist()
+    
+
+    def _parse_graded_events(self, logfile_df):
+        """Filters user_graded events."""
+        graded_events = logfile_df[logfile_df['eventname'] == r'\core\event\user_graded'].copy()
+        
+        if graded_events.empty:
+            return graded_events
+
+        # Parse JSON strings into a list of dictionaries
+        parsed_json = [
+            json.loads(val) if isinstance(val, str) else {} 
+            for val in graded_events['other']
+        ]
+        
+        expanded_df = pd.DataFrame(parsed_json, index=graded_events.index)
+        graded_events['objectid'] = pd.to_numeric(expanded_df['itemid'], errors='coerce') - 2
+        graded_events['result']   = pd.to_numeric(expanded_df['finalgrade'], errors='coerce')
+        graded_events = (graded_events
+                         .dropna(subset=['objectid', 'result', 'userid', 'timecreated'])
+                         .astype({'objectid': int, 'userid': str}))
+        return graded_events
+
+
+    def _process_standard_attempts(self, standard_df, xapi_df):
+        """Merges xAPI data onto standard learning tasks, keeping only the latest response."""
+        
+        if standard_df.empty:
+            return pd.DataFrame()
+
+        # Attach 'is_latest' directly as a column so it survives the merge
+        standard_df['is_latest'] = (
+            standard_df.groupby(['userid', 'objectid'])['timecreated'].transform('max') 
+            == standard_df['timecreated']
+        )
+        
+        # Standardize xAPI columns to match the standard logfile for merging
+        xapi = (
+            xapi_df
+            .rename(columns={'content_id': 'objectid', 'user_id': 'userid'})
+            .astype({'userid': str})
+        )
+        
+        # Initially attaches the xAPI response text to ALL attempts by that user 
+        # for that objectid, which we will clean up in the next step
+        attempts = pd.merge(
+            standard_df, 
+            xapi[['userid', 'objectid', 'correct_responses_pattern', 'response']], 
+            on=['userid', 'objectid'], 
+            how='left'
+        )
+        
+        # Only the latest attempt gets the xAPI text
+        # We null out the response columns for any row where 'is_latest' is False
+        attempts.loc[~attempts['is_latest'], ['correct_responses_pattern', 'response']] = None
+        attempts.fillna({'correct_responses_pattern': "", 'response': ""}, inplace=True)
+        
+        # Drop the helper column to keep the DataFrame clean
+        attempts.drop(columns=['is_latest'], inplace=True)
+        
+        return attempts
+       
+
+    def _process_hotspot_attempts(self, hotspot_df):
+        """Aggregates hotspot clicks into 10-minute blocks and calculates custom scores."""
+        if hotspot_df.empty:
+            return pd.DataFrame()
+            
+        # This maps {objectid : required_clicks}
+        # In the future, we will load this from a database!
+        scoring_rules = {
+            3: 4,
+            21: 16
+        }
+
+        # Group clicks into 10-minute blocks
+        first_click   = hotspot_df.groupby(['userid', 'objectid'])['timecreated'].transform('first')
+        attempt_block = ((hotspot_df['timecreated'] - first_click) // pd.Timedelta('10min')).astype(int)
+        
+        # Aggregate blocks
+        hs_processed = (
+            hotspot_df.assign(attempt_block=attempt_block)
+            .groupby(['userid', 'objectid', 'attempt_block'])
+            .agg(timecreated=('timecreated', 'max'), number_clicks=('objectid', 'size'))
+            .reset_index()
+        )
+        
+        # Dynamic Vectorized Scoring
+        hs_processed['result'] = 0.0  # Default score is 0
+        
+        # Map the required clicks to a temporary column based on the objectid
+        hs_processed['required_clicks'] = hs_processed['objectid'].map(scoring_rules)
+        
+        # Create a single mask: "Does this object have a rule?" AND "Did they click enough times?"
+        valid_mask = (
+            hs_processed['required_clicks'].notna() & 
+            (hs_processed['number_clicks'] >= hs_processed['required_clicks'])
+        )
+        
+        # Apply the universal math formula all at once
+        hs_processed.loc[valid_mask, 'result'] = (
+            hs_processed.loc[valid_mask, 'required_clicks'] / 
+            hs_processed.loc[valid_mask, 'number_clicks']
+        ) * 10
+
+        # Clean up temporary columns and add schema requirements
+        hs_processed.drop(columns=['required_clicks'], inplace=True)
+        hs_processed['response'] = ""
+        hs_processed['correct_responses_pattern'] = ""
+
+        return hs_processed
+    
+    
+    def _create_task_map(self):
+        """
+        Creates a dictionary mapping Moodle integer IDs to internal Task IDs 
+        """
+        moodle_tasks = self.data.get_csv(TASK_CSV_PATH, columns=['id', 'name'])
+        blueprint    = self.data.get_csv(COURSE_CSV_PATH, columns=['task_id', 'task'])
+        merged = moodle_tasks.merge(blueprint, left_on='name', right_on='task', how='inner')
+        task_prefix_map = merged.set_index('id')['task_id'].to_dict()
+        
+        return task_prefix_map
+    
+    
+    
 
     def execute(self):
         """
@@ -44,122 +173,55 @@ class AttemptedTransformer():
         Handles JSON parsing, the Hotspot workarounds, and xAPI response merging in pure Pandas.
         """
         
-        logfile_df = pd.read_csv(LOGFILE_CSV_PATH)
-        logfile_df['timecreated'] = pd.to_datetime(logfile_df['timecreated'] + 3600, unit='s')
-        xapi_df    = pd.read_csv(XAPI_CSV_PATH)
-        hotspot_task_ids = extract_hotspot_task_ids()
+        # Fetch Data from CSV-files and IDs of the tasks "Multiple Hotspots"
+        logfile_df, xapi_df = self._fetch_data()
+        hotspot_ids = self._extract_hotspot_task_ids()
         
-        edges = []
+        # Extract graded events from logfile
+        graded_events = self._parse_graded_events(logfile_df)
         
-        # --- 1. Filter and Parse the Standard Graded Events ---
-        graded_events = logfile_df[logfile_df['eventname'] == r'\core\event\user_graded'].copy()
-        
-        if graded_events.empty:
-            return edges
-
-        # Safely extract objectid and result from the JSON 'other' column
-        def parse_json_col(val, key, cast_type):
-            try:
-                return cast_type(json.loads(val).get(key))
-            except (TypeError, ValueError, AttributeError):
-                return None
-
-        graded_events['objectid'] = graded_events['other'].apply(lambda x: parse_json_col(x, 'itemid', int))
-        graded_events['objectid'] = graded_events['objectid'] - 2  # Align to m_hvp scale
-        graded_events['result'] = graded_events['other'].apply(lambda x: parse_json_col(x, 'finalgrade', float))
-        
-        # Drop rows that failed to parse
-        graded_events = graded_events.dropna(subset=['objectid', 'result', 'userid', 'timecreated'])
-        graded_events['objectid'] = graded_events['objectid'].astype(int)
-        graded_events['userid'] = graded_events['userid'].astype(str)
-
-        # --- 2. Separate Standard Tasks and Hotspot Tasks ---
-        is_hotspot = graded_events['objectid'].isin(hotspot_task_ids)
+        # Separate Standard Tasks and Hotspot Tasks
+        is_hotspot        = graded_events['objectid'].isin(hotspot_ids)
         standard_attempts = graded_events[~is_hotspot].copy()
-        hotspot_attempts = graded_events[is_hotspot].copy()
-
-        # --- 3. Process Standard Attempts & Join xAPI Data ---
-        if not standard_attempts.empty:
-            # Find the latest attempt per user per objectid to attach xAPI data
-            standard_attempts['is_latest'] = standard_attempts.groupby(['userid', 'objectid'])['timecreated'].transform('max') == standard_attempts['timecreated']
-            
-            # Clean xAPI data
-            xapi = xapi_df.rename(columns={'content_id': 'objectid', 'user_id': 'userid'}).copy()
-            xapi['userid'] = xapi['userid'].astype(str)
-            
-            # Merge xAPI data onto the standard attempts
-            standard_attempts = pd.merge(
-                standard_attempts, 
-                xapi[['userid', 'objectid', 'correct_responses_pattern', 'response']], 
-                on=['userid', 'objectid'], 
-                how='left'
-            )
-            
-            # xAPI data only belongs to the *latest* attempt, null out the rest
-            standard_attempts.loc[~standard_attempts['is_latest'], ['correct_responses_pattern', 'response']] = None
-            
-            # Replace NaNs with empty strings for Neo4j compatibility
-            standard_attempts['correct_responses_pattern'] = standard_attempts['correct_responses_pattern'].fillna("")
-            standard_attempts['response'] = standard_attempts['response'].fillna("")
-
-        # --- 4. Process Hotspot Tasks (Workaround Logic) ---
-        hs_processed = pd.DataFrame()
-        if not hotspot_attempts.empty:
-            # Group clicks into 10-minute attempt blocks
-            hotspot_attempts['first_click'] = hotspot_attempts.groupby(['userid', 'objectid'])['timecreated'].transform('first')
-            hotspot_attempts['time_since'] = hotspot_attempts['timecreated'] - hotspot_attempts['first_click']
-            hotspot_attempts['attempt_block'] = (hotspot_attempts['time_since'] // pd.Timedelta('10min')).astype(int)
-            
-            # Aggregate the blocks
-            hs_processed = hotspot_attempts.groupby(['userid', 'objectid', 'attempt_block']).agg(
-                latest_timestamp=('timecreated', 'max'),
-                number_clicks=('objectid', 'size')
-            ).reset_index()
-            
-            # Calculate scores based on click counts
-            def calc_hs_score(row):
-                if row['objectid'] == 3 and row['number_clicks'] > 3:
-                    return (4 / row['number_clicks']) * 10
-                elif row['objectid'] == 21 and row['number_clicks'] > 15:
-                    return (16 / row['number_clicks']) * 10
-                return 0.0
-                
-            hs_processed['result'] = hs_processed.apply(calc_hs_score, axis=1)
-            hs_processed['timecreated'] = hs_processed['latest_timestamp']
-            hs_processed['response'] = ""
-            hs_processed['correct_responses_pattern'] = ""
-
-        # --- 5. Combine All Attempts ---
-        # Notice we removed the < 8.0 filter here so we keep EVERYTHING!
-        all_attempts = pd.concat([standard_attempts, hs_processed], ignore_index=True)
+        hotspot_attempts  = graded_events[is_hotspot].copy()
         
-        tasks_map_df = pd.read_csv(TASK_CSV_PATH)
-        task_prefix_map = tasks_map_df.set_index('id')['name'].astype(str).str[:2].to_dict()
-        
-        # --- 6. Generate Pydantic Models and Serialize ---
-        validated_edges = []
-        for _, row in all_attempts.iterrows():
-            user_str = str(row['userid'])
-            obj_int = int(row['objectid'])
-            obj_str = str(row['objectid'])
-            timestamp = row['timecreated']
-            timestamp_str = timestamp.isoformat()
-            score_val = round(float(row['result']), 1)
-            
-            prefix = task_prefix_map.get(obj_int, "LT")
+        # Add information from xAPI to standard tasks and process hotspots
+        standard_attempts = self._process_standard_attempts(standard_attempts, xapi_df)
+        hotspot_attempts  = self._process_hotspot_attempts(hotspot_attempts)
 
-            # Instantiate the Pydantic model to validate the data
-            edge = ATTEMPTED(
-                attempted_id=f"r_at_{user_str}_{obj_str}_{timestamp.timestamp()}",
-                timestamp=timestamp_str,
-                score=score_val,
-                passed=(score_val >= 8.0), # Make sure to uncomment 'passed' in your schema!
-                student_response=str(row['response']),
-                correct_response=str(row['correct_responses_pattern']),
-                task_id=f"{prefix}",
-                student_id=user_str
-            )
-            
-            # Immediately serialize to a dictionary and append
-            validated_edges.append(edge.model_dump())
-        return validated_edges
+        # Combine results
+        all_attempts = pd.concat([standard_attempts, hotspot_attempts], ignore_index=True)
+        
+        # Create mappping for task ID
+        task_prefix_map = self._create_task_map()
+        
+        # Map fields to the ATTEMPTED schema expectations
+        all_attempts['score'] = all_attempts['result'].astype(float).round(1)
+        all_attempts['passed'] = all_attempts['score'] >= 8.0
+        all_attempts['student_response'] = all_attempts['response'].astype(str)
+        all_attempts['correct_response'] = all_attempts['correct_responses_pattern'].astype(str)
+        all_attempts['task_id'] = all_attempts['objectid'].astype(int).map(lambda x: task_prefix_map.get(x, "LT"))
+        all_attempts['student_id'] = all_attempts['userid'].astype(str)
+        all_attempts['timestamp'] = all_attempts['timecreated'].apply(lambda x: x.isoformat())
+        
+        # Construct the ID
+        all_attempts['attempted_id'] = (
+            "r_at_" + 
+            all_attempts['student_id'] + "_" + 
+            all_attempts['task_id'] + "_" + 
+            all_attempts['timestamp']
+        )
+        
+        # Drop extra columns to keep the dictionary clean, matching ONLY the schema
+        columns_to_keep = [
+            'attempted_id', 'timestamp', 'score', 'passed', 
+            'student_response', 'correct_response', 'task_id', 'student_id'
+        ]
+        final_df = all_attempts[columns_to_keep]
+        
+        # Validate
+        validator = PydanticValidator()
+        validated_data = validator.validate_dataframe(final_df, "ATTEMPTED")
+        
+        return validated_data
+        
