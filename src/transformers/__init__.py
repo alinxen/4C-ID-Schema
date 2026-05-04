@@ -1,7 +1,4 @@
 
-from .teaching_teansformer       import DevelopsTransformer, PracticesTransformer,  AppliesTransformer,  RequiresSTransformer, RequiresKTransformer
-from .activity_transformer       import AttemptedTransformer
-from .structure_transformer      import GroupsTransformer, ProvidesTransformer, OffersTransformer, IncludesTransformer, CuesTransformer, ReferencesTransformer, TrainsTransformer
 from .learning_transformer       import TackledTransformer, ReviewedTransformer, ConsultedTransformer, StudiedTransformer, FinishedTransformer
 
 
@@ -17,6 +14,23 @@ from .node_transformers import (
     ProceduralTransformer,
     LearningSessionTransformer
     )
+
+from .edge_transformers import (
+    GroupsTransformer,
+    ProvidesTransformer,
+    OffersTransformer, 
+    IncludesTransformer,
+    CuesTransformer, 
+    ReferencesTransformer,
+    TrainsTransformer,
+    RequiresSTransformer, 
+    RequiresKTransformer,
+    DevelopsTransformer,
+    PracticesTransformer,
+    AppliesTransformer,
+    )
+
+from .edge_attempted import AttemptedTransformer
 
 __all__ = [
     "SkillTransformer", 

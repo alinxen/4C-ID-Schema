@@ -34,7 +34,4 @@ def load_edges_to_neo4j(driver, edge_name, validated_data):
         count_query = f"MATCH ()-[r:{rel_type}]->() RETURN count(r) AS total_count"
         total_edges = session.run(count_query).single()["total_count"]
         
-        print(
-            f"{rel_type}: Created {counter.relationships_created} new edges, "
-            f"counting {total_edges}"
-        )
+        return counter.relationships_created, total_edges

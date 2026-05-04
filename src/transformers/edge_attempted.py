@@ -1,40 +1,49 @@
 import pandas as pd
 import json
 from src.config import LOGFILE_CSV_PATH, XAPI_CSV_PATH, TASK_CSV_PATH, HVP_CSV_PATH, COURSE_CSV_PATH
-from src.validators.pydantic_validator import PydanticValidator
 
 
 
 
 class AttemptedTransformer():
-
-    def __init__(self, data_store):
-        self.data = data_store
     
+    DATA = {
+            "logfile":
+                (LOGFILE_CSV_PATH, ['userid', 'eventname', 'other', 'timecreated']),
+            "xapi":
+                (XAPI_CSV_PATH, ['user_id', 'content_id', 'correct_responses_pattern', 'response']),
+            "tasks":
+                (TASK_CSV_PATH, ['id', 'main_library_id']),
+            "libs":
+                (HVP_CSV_PATH,  ['id', 'title']),
+            "moodle_tasks":
+                (TASK_CSV_PATH, ['id', 'name']),
+            "blueprint":
+                (COURSE_CSV_PATH, ['task_id', 'task'])
+            }
+       
+               
     
-    def _fetch_data(self):
+    def _fetch_data(self, extracted_data):
         """Fetches data and applies initial time corrections to raw data logs."""
-        logfile = self.data.get_csv(
-            LOGFILE_CSV_PATH,
-            columns=['userid', 'eventname', 'other', 'timecreated'])
+        logfile = extracted_data["logfile"].copy()
         
         # Apply +1 hour timezone offset
         logfile['timecreated'] = pd.to_datetime(logfile['timecreated'] + 3600, unit='s')
         
-        xapi = self.data.get_csv(
-            XAPI_CSV_PATH,
-            columns=['user_id', 'content_id', 'correct_responses_pattern', 'response'])
+        xapi = extracted_data["xapi"].copy()
+            
            
         return logfile, xapi
     
         
-    def _extract_hotspot_task_ids(self):
+    def _extract_hotspot_task_ids(self, extracted_data):
         """
         Identifies all tasks that are of the type 'Find Multiple Hotspots'
         by matching the HVP tasks with the HVP libraries.
         """
-        tasks = self.data.get_csv(TASK_CSV_PATH, columns=['id', 'main_library_id'])
-        libs  = self.data.get_csv(HVP_CSV_PATH,  columns=['id', 'title'])
+        tasks = extracted_data["tasks"].copy()
+        libs  = extracted_data["libs"].copy()
         
         target_lib_ids = libs[libs['title'] == "Find Multiple Hotspots"]['id']
         hotspot_tasks = tasks[tasks['main_library_id'].isin(target_lib_ids)]
@@ -153,12 +162,12 @@ class AttemptedTransformer():
         return hs_processed
     
     
-    def _create_task_map(self):
+    def _create_task_map(self, extracted_data):
         """
         Creates a dictionary mapping Moodle integer IDs to internal Task IDs 
         """
-        moodle_tasks = self.data.get_csv(TASK_CSV_PATH, columns=['id', 'name'])
-        blueprint    = self.data.get_csv(COURSE_CSV_PATH, columns=['task_id', 'task'])
+        moodle_tasks = extracted_data["moodle_tasks"].copy() #self.data.get_csv(TASK_CSV_PATH, columns=['id', 'name'])
+        blueprint    = extracted_data["blueprint"].copy()#self.data.get_csv(COURSE_CSV_PATH, columns=['task_id', 'task'])
         merged = moodle_tasks.merge(blueprint, left_on='name', right_on='task', how='inner')
         task_prefix_map = merged.set_index('id')['task_id'].to_dict()
         
@@ -166,16 +175,15 @@ class AttemptedTransformer():
     
     
     
-
-    def execute(self):
+    def execute(self, extracted_data):
         """
         Extracts ALL graded learning task attempts (both successes and struggles).
         Handles JSON parsing, the Hotspot workarounds, and xAPI response merging in pure Pandas.
         """
         
         # Fetch Data from CSV-files and IDs of the tasks "Multiple Hotspots"
-        logfile_df, xapi_df = self._fetch_data()
-        hotspot_ids = self._extract_hotspot_task_ids()
+        logfile_df, xapi_df = self._fetch_data(extracted_data)
+        hotspot_ids = self._extract_hotspot_task_ids(extracted_data)
         
         # Extract graded events from logfile
         graded_events = self._parse_graded_events(logfile_df)
@@ -193,7 +201,7 @@ class AttemptedTransformer():
         all_attempts = pd.concat([standard_attempts, hotspot_attempts], ignore_index=True)
         
         # Create mappping for task ID
-        task_prefix_map = self._create_task_map()
+        task_prefix_map = self._create_task_map(extracted_data)
         
         # Map fields to the ATTEMPTED schema expectations
         all_attempts['score'] = all_attempts['result'].astype(float).round(1)
@@ -219,9 +227,5 @@ class AttemptedTransformer():
         ]
         final_df = all_attempts[columns_to_keep]
         
-        # Validate
-        validator = PydanticValidator()
-        validated_data = validator.validate_dataframe(final_df, "ATTEMPTED")
-        
-        return validated_data
+        return final_df
         

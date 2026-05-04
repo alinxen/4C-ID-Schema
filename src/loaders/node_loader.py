@@ -37,7 +37,9 @@ def load_nodes_to_neo4j(driver, node_name, validated_data):
         # How many nodes exist?
         count_query = f"MATCH (n:{label}) RETURN count(n) AS total_count"
         total_nodes = session.run(count_query).single()["total_count"]
-        print(
-            f"{label}: Created {counter.nodes_created} new nodes, "
-            f"counting {total_nodes}"
-        )
+        
+        return counter.nodes_created,total_nodes 
+        #print(
+        #    f"{label}: Created {counter.nodes_created} new nodes, "
+        #    f"counting {total_nodes}"
+        #)
