@@ -16,15 +16,15 @@ import src.transformers as tf
 
 NODE_PIPELINE = [
     ("SKILL",                   tf.SkillTransformer),
-    #("KNOWLEDGE",               tf.KnowledgeTransformer),
-    #("COMPETENCE",              tf.CompetenceTransformer), 
-    #("LEARNING_TASK",           tf.TaskTransformer),
-    #("SUPPORTIVE_INFORMATION",  tf.SupportiveTransformer),
-    #("PROCEDURAL_INFORMATION",  tf.ProceduralTransformer),
-    #("LEARNING_SESSION",        tf.LearningSessionTransformer),
-    #("STUDENT",                 tf.StudentTransformer),
-    #("TASK_CLASS",              tf.TaskClassTransformer),
-    #("PART_TASK_PRACTICE",      tf.PracticeTransformer)
+    ("STUDENT",                 tf.StudentTransformer),
+    ("KNOWLEDGE",               tf.KnowledgeTransformer),
+    ("TASK_CLASS",              tf.TaskClassTransformer),
+    ("COMPETENCE",              tf.CompetenceTransformer), 
+    ("LEARNING_TASK",           tf.TaskTransformer),
+    ("LEARNING_SESSION",        tf.LearningSessionTransformer),
+    ("PART_TASK_PRACTICE",      tf.PracticeTransformer),
+    ("SUPPORTIVE_INFORMATION",  tf.SupportiveTransformer),
+    ("PROCEDURAL_INFORMATION",  tf.ProceduralTransformer)
 ]
 
 def nodes_pipeline(db):
@@ -32,6 +32,7 @@ def nodes_pipeline(db):
     Converts raw data from CSV files using Transformers into Pydantic validated
     data and uploads nodes to Neo4j
     """
+    
     print(f"\nStarting node pipeline for {len(NODE_PIPELINE)} node types...\n" + "-" * 40)
     
     try:
@@ -60,27 +61,6 @@ def nodes_pipeline(db):
 
 
 
-
-#def nodes_pipeline(db):
-#    """
-#    Converts raw data from CSV files using Transformers into Pydantic validated
-#    data and uploads nodes to Neo4j
-#    """
-#    print(f"\nStarting node pipeline for {len(NODE_PIPELINE)} node types...\n" + "-" * 40)
-#    
-#    try:
-#        for node_label, TransformerClass in NODE_PIPELINE:
-#            
-#            current_node   = node_label
-#            transformer    = TransformerClass()
-#            validated_data = transformer.execute()
-#            load_nodes_to_neo4j(db.driver, node_label, validated_data)#
-#
-#    except Exception as e:
-#        print(f"\nFATAL ERROR during {current_node} processing: {e}")
-#            
-#    finally:
-#        print("-" * 40 + "\nNode pipeline execution finished.\n")
 
 
 # ---------------------------------------------------------
