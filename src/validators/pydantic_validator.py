@@ -5,6 +5,9 @@ import logging
 
 
 class PydanticValidator:
+    
+    def __init__(self, model_name):
+        self.model_name = model_name
 
     def _get_schema(self, model_name):
         """Fetch the Pydantic model"""
@@ -16,7 +19,7 @@ class PydanticValidator:
         return model
 
 
-    def validate_dataframe(self, dataframe, model_name):
+    def validate(self, dataframe):
         """
         Validates a DataFrame against a Pydantic schema.
         Expects the DataFrame columns to match the schema's field names.
@@ -26,7 +29,7 @@ class PydanticValidator:
         validated_data = []
         
         # Fetch Model
-        model = self._get_schema(model_name)
+        model = self._get_schema(self.model_name)
         
         try:
             # Iterate and validate 

@@ -1,11 +1,12 @@
 
 from .student_transformer        import StudentTransformer,  LearningSessionTransformer
-from .competence_transformer     import SkillTransformer,    KnowledgeTransformer,  CompetenceTransformer
+from .competence_transformer     import KnowledgeTransformer,  CompetenceTransformer
 from .instructional_transformer  import TaskTransformer,     SupportiveTransformer, ProceduralTransformer, TaskClassTransformer, PracticeTransformer
 from .teaching_teansformer       import DevelopsTransformer, PracticesTransformer,  AppliesTransformer,  RequiresSTransformer, RequiresKTransformer
 from .activity_transformer       import AttemptedTransformer
 from .structure_transformer      import GroupsTransformer, ProvidesTransformer, OffersTransformer, IncludesTransformer, CuesTransformer, ReferencesTransformer, TrainsTransformer
 from .learning_transformer       import TackledTransformer, ReviewedTransformer, ConsultedTransformer, StudiedTransformer, FinishedTransformer
+from .node_transformers          import SkillTransformer
 
 __all__ = [
     "SkillTransformer", 

@@ -1,9 +1,13 @@
 from src.database import GraphDB
-from src.extractors.data_store import DataStore
+from src.extractors.data_extractor import DataExtractor
 from src.loaders.node_loader import load_nodes_to_neo4j
 from src.loaders.edge_loader import load_edges_to_neo4j
+from src.validators.pydantic_validator import PydanticValidator
+
 
 import src.transformers as tf
+
+
 
 
 # -------------------------------------------------------
@@ -12,18 +16,16 @@ import src.transformers as tf
 
 NODE_PIPELINE = [
     ("SKILL",                   tf.SkillTransformer),
-    ("KNOWLEDGE",               tf.KnowledgeTransformer),
-    ("COMPETENCE",              tf.CompetenceTransformer), 
-    ("LEARNING_TASK",           tf.TaskTransformer),
-    ("SUPPORTIVE_INFORMATION",  tf.SupportiveTransformer),
-    ("PROCEDURAL_INFORMATION",  tf.ProceduralTransformer),
-    ("LEARNING_SESSION",        tf.LearningSessionTransformer),
-    ("STUDENT",                 tf.StudentTransformer),
-    ("TASK_CLASS",              tf.TaskClassTransformer),
-    ("PART_TASK_PRACTICE",      tf.PracticeTransformer)
+    #("KNOWLEDGE",               tf.KnowledgeTransformer),
+    #("COMPETENCE",              tf.CompetenceTransformer), 
+    #("LEARNING_TASK",           tf.TaskTransformer),
+    #("SUPPORTIVE_INFORMATION",  tf.SupportiveTransformer),
+    #("PROCEDURAL_INFORMATION",  tf.ProceduralTransformer),
+    #("LEARNING_SESSION",        tf.LearningSessionTransformer),
+    #("STUDENT",                 tf.StudentTransformer),
+    #("TASK_CLASS",              tf.TaskClassTransformer),
+    #("PART_TASK_PRACTICE",      tf.PracticeTransformer)
 ]
-
-
 
 def nodes_pipeline(db):
     """
@@ -34,17 +36,51 @@ def nodes_pipeline(db):
     
     try:
         for node_label, TransformerClass in NODE_PIPELINE:
+
+            extractor = DataExtractor(TransformerClass.DATA)
+            extracted_data = extractor.extract()
             
-            current_node   = node_label
             transformer    = TransformerClass()
-            validated_data = transformer.execute()
+            transformed_data = transformer.execute(extracted_data)
+            
+            validator = PydanticValidator(node_label)
+            validated_data = validator.validate(transformed_data)
+            
             load_nodes_to_neo4j(db.driver, node_label, validated_data)
 
     except Exception as e:
-        print(f"\nFATAL ERROR during {current_node} processing: {e}")
+        print(f"\nFATAL ERROR during  processing: {e}")
             
     finally:
         print("-" * 40 + "\nNode pipeline execution finished.\n")
+
+
+
+
+
+
+
+
+#def nodes_pipeline(db):
+#    """
+#    Converts raw data from CSV files using Transformers into Pydantic validated
+#    data and uploads nodes to Neo4j
+#    """
+#    print(f"\nStarting node pipeline for {len(NODE_PIPELINE)} node types...\n" + "-" * 40)
+#    
+#    try:
+#        for node_label, TransformerClass in NODE_PIPELINE:
+#            
+#            current_node   = node_label
+#            transformer    = TransformerClass()
+#            validated_data = transformer.execute()
+#            load_nodes_to_neo4j(db.driver, node_label, validated_data)#
+#
+#    except Exception as e:
+#        print(f"\nFATAL ERROR during {current_node} processing: {e}")
+#            
+#    finally:
+#        print("-" * 40 + "\nNode pipeline execution finished.\n")
 
 
 # ---------------------------------------------------------
@@ -88,6 +124,7 @@ def edges_pipeline(db, data):
             current_edge = edge_label
             try:
                 transformer = TransformerClass(data)  # For updated transformers
+                print(edge_label)
             except TypeError:
                 transformer = TransformerClass()       # For old transformers
             validated_data = transformer.execute()
@@ -103,13 +140,13 @@ def edges_pipeline(db, data):
 
 def main():
     db = GraphDB()
-    data = DataStore()
+    #data = DataStore()
    
     if db.driver is not None:
         try:
             # db.set_constraints()
             nodes_pipeline(db)
-            edges_pipeline(db, data)
+            #edges_pipeline(db, data)
             
             # Print the model!
             # print(DEVELOPS_COMPETENCE.model_json_schema())
