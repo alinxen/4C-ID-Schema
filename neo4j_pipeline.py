@@ -2,7 +2,7 @@ from src.database import GraphDB
 from src.loaders.graph_loader          import GraphLoader
 from src.extractors.data_extractor     import DataExtractor
 from src.validators.pydantic_validator import PydanticValidator
-
+import traceback
 
 import src.transformers as tf
 
@@ -37,6 +37,7 @@ EDGE_PIPELINE = [
     ("GROUPS",              tf.GroupsTransformer),
     ("PROVIDES",            tf.ProvidesTransformer),
     ("INCLUDES",            tf.IncludesTransformer),
+    ("FINISHED",            tf.FinishedTransformer),
     ("ATTEMPTED",           tf.AttemptedTransformer),
     ("REFERENCES",          tf.ReferencesTransformer),
     ("REQUIRES_SKILL",      tf.RequiresSTransformer),
@@ -47,7 +48,6 @@ EDGE_PIPELINE = [
 
   #  ("TACKLED",             tf.TackledTransformer),
    # ("STUDIED",             tf.StudiedTransformer),
-   # ("FINISHED",            tf.FinishedTransformer),
    # ("REVIEWED",            tf.ReviewedTransformer),
    # ("CONSULTED",           tf.ConsultedTransformer),
     ]
@@ -81,6 +81,8 @@ def etvl_pipeline(db, entity_type, PIPELINE):
     
         except Exception as e:
             print(f"\nERROR while processing {label}: {e}") 
+            error_details = traceback.format_exc()
+            print(f"\nFULL ERROR TRACEBACK for {label}:\n{error_details}")
             report.append([label, "failed", "N/A"])
             continue
    
@@ -100,7 +102,7 @@ def main():
             print(f"\nStarting node pipeline for {len(NODE_PIPELINE)} node types...\n" + "-" * 40)
             results = etvl_pipeline(db, "node" , NODE_PIPELINE)
             
-            print(f"\n{'NODES':<30} | {'NEW':<8} | {'EXISTING':<8}")
+            print(f"\n{'NODES':<30} | {'NEW':<8} | {'TOTAL':<8}")
             print(f"{'-'*55}")
             
             for row in results:
@@ -118,7 +120,7 @@ def main():
             results = etvl_pipeline(db, "edge", EDGE_PIPELINE)
             
             
-            print(f"\n{'EDGES':<30} | {'NEW':<8} | {'EXISTING':<8}")
+            print(f"\n{'EDGES':<30} | {'NEW':<8} | {'TOTAL':<8}")
             print(f"{'-'*55}")
             
             for row in results:

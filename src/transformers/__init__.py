@@ -1,5 +1,5 @@
 
-from .learning_transformer       import TackledTransformer, ReviewedTransformer, ConsultedTransformer, StudiedTransformer, FinishedTransformer
+from .learning_transformer       import TackledTransformer, ReviewedTransformer, ConsultedTransformer, StudiedTransformer
 
 
 from .node_transformers import (
@@ -31,6 +31,7 @@ from .edge_transformers import (
     )
 
 from .edge_attempted import AttemptedTransformer
+from .edge_finished  import FinishedTransformer
 
 __all__ = [
     "SkillTransformer", 

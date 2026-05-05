@@ -9,7 +9,7 @@ class AttemptedTransformer():
     
     DATA = {
             "logfile":
-                (LOGFILE_CSV_PATH, ['userid', 'eventname', 'other', 'timecreated']),
+                (LOGFILE_CSV_PATH, ['userid', 'eventname', 'other', 'timecreated', 'objectid']),
             "xapi":
                 (XAPI_CSV_PATH, ['user_id', 'content_id', 'correct_responses_pattern', 'response']),
             "tasks":
@@ -30,6 +30,11 @@ class AttemptedTransformer():
         
         # Apply +1 hour timezone offset
         logfile['timecreated'] = pd.to_datetime(logfile['timecreated'] + 3600, unit='s')
+        
+        # Filter out guest (1) and admin (2) accounts
+        logfile['userid'] = pd.to_numeric(logfile['userid'], errors='coerce')
+        logfile = logfile[~logfile['userid'].isin([1, 2])].copy()
+        logfile['userid'] = logfile['userid'].astype(str)
         
         xapi = extracted_data["xapi"].copy()
             
@@ -173,6 +178,74 @@ class AttemptedTransformer():
         
         return task_prefix_map
     
+    def _recover_ungraded_attempts(self, logfile_df, graded_events):
+        """
+        Recovers 'attempt_submitted' events that didn't trigger a 'user_graded' event.
+        Carries forward the last known score for that user and object.
+        """
+        # Ensure logfile is sorted for merge_asof
+        logfile_df = logfile_df.sort_values('timecreated')
+        
+        submissions = logfile_df[logfile_df['eventname'] == r'\mod_hvp\event\attempt_submitted'].copy()
+        grades = graded_events.copy()
+        
+        if submissions.empty or grades.empty:
+            return pd.DataFrame()
+
+        # Match submissions to grades within a 40-second window FORWARD
+        matched_forward = pd.merge_asof(
+            submissions, 
+            grades[['timecreated', 'eventname']], 
+            on='timecreated', 
+            direction='forward', 
+            tolerance=pd.Timedelta(seconds=40),
+            suffixes=('', '_fwd')
+        )
+
+        # Match submissions to grades within a 40-second window BACKWARD
+        matched_backward = pd.merge_asof(
+            submissions, 
+            grades[['timecreated', 'eventname']], 
+            on='timecreated', 
+            direction='backward', 
+            tolerance=pd.Timedelta(seconds=40),
+            suffixes=('', '_bwd')
+        )
+        
+        # Find submissions that failed to match with a grade event in BOTH directions
+        unpaired_mask = matched_forward['eventname_fwd'].isna() & matched_backward['eventname_bwd'].isna()
+        unpaired_submissions = matched_forward[unpaired_mask].drop(columns=['eventname_fwd']).copy()
+        
+        if unpaired_submissions.empty:
+            return pd.DataFrame()
+            
+        # To get the objectid, we look backwards for the last course_module_viewed
+        # For a robust vectorized approach, forward-fill the objectid from views
+        views = logfile_df[logfile_df['eventname'] == r'\mod_hvp\event\course_module_viewed'].copy()
+        views['objectid'] = pd.to_numeric(views['objectid'], errors='coerce')
+        
+        # Merge the unpaired submissions with the last viewed objectid
+        recovered = pd.merge_asof(
+            unpaired_submissions.drop(columns=['objectid']), 
+            views[['userid', 'timecreated', 'objectid']], 
+            on='timecreated',
+            by='userid',
+            direction='backward'
+        )
+        
+        recovered = recovered.dropna(subset=['objectid'])
+        
+        # Now, fetch the last known score for this user + object combination from our graded_events
+        latest_grades = grades.sort_values('timecreated').groupby(['userid', 'objectid']).last().reset_index()
+        
+        final_recovered = pd.merge(
+            recovered,
+            latest_grades[['userid', 'objectid', 'result']],
+            on=['userid', 'objectid'],
+            how='inner'
+        )
+        
+        return final_recovered
     
     
     def execute(self, extracted_data):
@@ -188,6 +261,18 @@ class AttemptedTransformer():
         # Extract graded events from logfile
         graded_events = self._parse_graded_events(logfile_df)
         
+        recovered_events = self._recover_ungraded_attempts(logfile_df, graded_events)
+        
+        # NEW: Filter out hotspots from recovered events to prevent logic contamination
+        if not recovered_events.empty:
+            recovered_events = recovered_events[~recovered_events['objectid'].isin(hotspot_ids)].copy()
+            
+            # Legacy code also explicitly blanked out the student_response for recovered attempts
+            recovered_events['is_recovered'] = True 
+            
+            graded_events = pd.concat([graded_events, recovered_events], ignore_index=True)
+            graded_events['is_recovered'] = graded_events['is_recovered'].fillna(False)
+            
         # Separate Standard Tasks and Hotspot Tasks
         is_hotspot        = graded_events['objectid'].isin(hotspot_ids)
         standard_attempts = graded_events[~is_hotspot].copy()
@@ -219,6 +304,10 @@ class AttemptedTransformer():
             all_attempts['task_id'] + "_" + 
             all_attempts['timestamp']
         )
+        
+        # ACT ON THE RECOVERED FLAG: Wipe student_response for ghost attempts
+        if 'is_recovered' in all_attempts.columns:
+            all_attempts.loc[all_attempts['is_recovered'] == True, 'student_response'] = ""
         
         # Drop extra columns to keep the dictionary clean, matching ONLY the schema
         columns_to_keep = [
