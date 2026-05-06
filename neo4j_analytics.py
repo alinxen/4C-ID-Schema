@@ -1,44 +1,55 @@
-from neomodel import db
+import pandas as pd
+import nbformat as nbf
 
-# Clear registry for interactive environments like Spyder/Jupyter
-if hasattr(db, '_NODE_CLASS_REGISTRY'):
-    db._NODE_CLASS_REGISTRY.clear()
-
-from src.analytics.config import NeomodelManager
-from src.analytics.models import Skill, RequiresSRel
+#from src.analytics.cypher_queries import QUERIES
 
 
-def cool_things_that_neomodel_can_do():
-    # Returns a list of 'Skill' Python objects
-    all_skills = Skill.nodes.all() 
-    for skill in all_skills:
-        print(skill.skill_id)
+
+
+def build_jupyter_notebook(competence_questions):#, queries):
     
-    # List all properties of one node
-    one_skill = Skill.nodes.get(skill_id="SDSRM11")
-    print(one_skill.__properties__)
-    print(one_skill.skill_title)
+    nb = nbf.v4.new_notebook()
+    cells = []
+    
+    for index, row in competence_questions.iterrows():
+        
+        cq_id    = row['Question_ID']
+        question = row['Question']
 
-    # List edges and edge properties
-    two_skill = Skill.nodes.get(skill_id="SDSBA14")
+        #query = queries.get(cq_id, "// Query not written yet")
 
-    # Get all nodes connected by the 'REQUIRES' edge
-    prerequisite_skills = two_skill.RequiresRel.all()
-
-    for prereq in prerequisite_skills:
-        print(f"Python requires: {prereq.name}")
-
+        cells.append(nbf.v4.new_markdown_cell(f"{cq_id}: {question}"))
+#         code = f"""
+# query = \"\"\"
+# {query_string}
+# \"\"\"
+# # Run query with parameters here
+# """
+#     cells.append(nbf.v4.new_code_cell(code))
+    
+    
+    nb['cells'] = cells
+    with open('Schema_Evaluation.ipynb', 'w') as f:
+        nbf.write(nb, f)
 
 
 
 def main():
-    # 1. Initialize neomodel before querying
-    manager = NeomodelManager()
-    manager.connect_neomodel()
-    cool_things_that_neomodel_can_do()
+    # Load Competence Questions
+    competence_questions = pd.read_csv("/home/andrea/Documents/Docker/4cid-schema/src/analytics/competence_questions.csv", sep = ";")
+
+    # Load Queries
+    
+    # Create Jupyter-Notebook
+    build_jupyter_notebook(competence_questions)
+    
+#     # 1. Initialize neomodel before querying
+#     manager = NeomodelManager()
+#     manager.connect_neomodel()
+#     cool_things_that_neomodel_can_do()
 
 
-# Create helper function such as get all nodes of type or get all skills of type
+# # Create helper function such as get all nodes of type or get all skills of type
 
 
 if __name__=="__main__":
