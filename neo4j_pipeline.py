@@ -35,6 +35,7 @@ EDGE_PIPELINE = [
     ("TRAINS",              tf.TrainsTransformer),
     ("OFFERS",              tf.OffersTransformer),
     ("GROUPS",              tf.GroupsTransformer),
+    ("STUDIED",             tf.StudiedTransformer),
     ("PROVIDES",            tf.ProvidesTransformer),
     ("INCLUDES",            tf.IncludesTransformer),
     ("FINISHED",            tf.FinishedTransformer),
@@ -47,7 +48,7 @@ EDGE_PIPELINE = [
     ("DEVELOPS_COMPETENCE", tf.DevelopsTransformer),
 
   #  ("TACKLED",             tf.TackledTransformer),
-   # ("STUDIED",             tf.StudiedTransformer),
+    
    # ("REVIEWED",            tf.ReviewedTransformer),
    # ("CONSULTED",           tf.ConsultedTransformer),
     ]

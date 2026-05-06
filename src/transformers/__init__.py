@@ -1,21 +1,5 @@
 
-from .learning_transformer       import TackledTransformer, ReviewedTransformer, ConsultedTransformer, StudiedTransformer
-
-
-from .node_transformers import (
-    SkillTransformer,
-    KnowledgeTransformer,  
-    CompetenceTransformer, 
-    StudentTransformer,
-    TaskClassTransformer, 
-    PracticeTransformer,
-    TaskTransformer, 
-    SupportiveTransformer,
-    ProceduralTransformer,
-    LearningSessionTransformer
-    )
-
-from .edge_transformers import (
+from .edge_transformers_1 import (
     GroupsTransformer,
     ProvidesTransformer,
     OffersTransformer, 
@@ -30,36 +14,58 @@ from .edge_transformers import (
     AppliesTransformer,
     )
 
-from .edge_attempted import AttemptedTransformer
-from .edge_finished  import FinishedTransformer
+from .edge_transformers_2 import ( 
+    AttemptedTransformer, 
+    FinishedTransformer
+    )
+
+from .edge_transformers_3  import (
+    TackledTransformer,
+    ReviewedTransformer, 
+    ConsultedTransformer,
+    StudiedTransformer
+    )
+
+from .node_transformers import (
+    SkillTransformer,
+    KnowledgeTransformer,  
+    CompetenceTransformer, 
+    StudentTransformer,
+    TaskClassTransformer, 
+    PracticeTransformer,
+    TaskTransformer, 
+    SupportiveTransformer,
+    ProceduralTransformer,
+    LearningSessionTransformer
+    )
 
 __all__ = [
-    "SkillTransformer", 
-    "KnowledgeTransformer", 
-    "CompetenceTransformer",
-    "TaskTransformer", 
-    "SupportiveTransformer", 
-    "ProceduralTransformer",
-    "LearningSessionTransformer", 
-    "StudentTransformer",
-    "DevelopsTransformer",
-    "PracticesTransformer",
     "AppliesTransformer",
     "AttemptedTransformer",
-    "RequiresSTransformer",
-    "RequiresKTransformer",
-    "TaskClassTransformer",
-    "PracticeTransformer",
-    "GroupsTransformer",
-    "ProvidesTransformer",
-    "OffersTransformer",
-    "IncludesTransformer",
-    "TackledTransformer",
-    "ReviewedTransformer",
+    "CompetenceTransformer",
     "ConsultedTransformer",
-    "StudiedTransformer",
+    "CuesTransformer",
+    "DevelopsTransformer",
     "FinishedTransformer",
-    "CuesTransformer", 
-    "ReferencesTransformer", 
+    "GroupsTransformer",
+    "IncludesTransformer",
+    "KnowledgeTransformer",
+    "LearningSessionTransformer",
+    "OffersTransformer",
+    "PracticeTransformer",
+    "PracticesTransformer",
+    "ProceduralTransformer",
+    "ProvidesTransformer",
+    "ReferencesTransformer",
+    "RequiresKTransformer",
+    "RequiresSTransformer",
+    "ReviewedTransformer",
+    "SkillTransformer",
+    "StudentTransformer",
+    "StudiedTransformer",
+    "SupportiveTransformer",
+    "TackledTransformer",
+    "TaskClassTransformer",
+    "TaskTransformer",
     "TrainsTransformer"
 ]
