@@ -11,31 +11,37 @@ The system relies on two Docker containers:
 
 ## Project Structure
 
-```text
+```
 main/
-├── data/                                   # Local CSVs files with simulated Moodle data
-├── docker_data/                            # Persistent database volume (auto-generated)
+├── data/                            # Local CSV files containing simulated Moodle data
+├── docker_data/                     # Volume for the Neo4j database
 ├── src/
-│   ├── config.py                           # Credentials, URIs, and Filepaths
-│   ├── database.py                         # Neo4j Driver communication
-│   ├── transformers/                       # Extract data from CSVs and validate using Pydantic models
-│   │   ├── activity_transformer.py
-│   │   ├── competence_transformers.py        # Skill, Knowledge, Competence
-│   │   ├── instructional_transformers.py     # Learning Tasks, Procedural/Supportive Info, Part-Task Practice
-│   │   ├── learning_transformer.py
-│   │   ├── structure_transformer.py
-│   │   ├── student_transformers.py           # Student, Learning Sessions
-│   │   └── teaching_transformer.py
-│   ├── loaders/                            # Functions that execute Cypher queries
-│   │   ├── node_loader.py                    # Load nodes into Neo4j
-│   │   └── edge_loader.py                    # Load edges into Neo4j
-│   └── schema.py                           # Constraints and Pydantic models                    
-├── requirements.txt                        # Python dependencies
-├── .env                                    # Environment variables (Create this yourself!)
-├── docker-compose.yml                      # Container orchestration blueprint
-├── Dockerfile                              # Python pipeline container instructions
-├── README.md                               
-└── neo4j_pipeline.py                       # The main execution script
+│   ├── analytics/
+│   │   ├── competence_questions.csv # CQs used for evaluating the schema
+│   │   └── cypher_queries.py        # Cypher queries matching CQs
+│   ├── extractors/
+│   │   └── data_extractor.py        # Handles extraction of raw data from CSV files
+│   ├── loaders/
+│   │   ├── edge_loader.py           # Loads transformed DataFrames as edges into Neo4j
+│   │   ├── node_loader.py           # Loads transformed DataFrames as nodes into Neo4j 
+│   │   └── graph_loader.py          # Master class combining edge and node loaders
+│   ├── transformers/              
+│   │   ├── edge_transformers_1.py   # Base class and transformations for graph edges
+│   │   ├── edge_transformers_2.py   # Handles FINISHED and ATTEMPTED edges
+│   │   ├── edge_transformers_3.py   # Handles STUDIED, TACKLED, REVIEWED, and CONSULTED edges
+│   │   └── node_transformers.py     # Base class and transformations for graph nodes
+│   ├── validators/                
+│   │   └── pydantic_validator.py    # Validates data against Pydantic schema
+│   ├── config.py                    # Filepaths and Stuff
+│   ├── database.py                  # Manages Neo4j/Python connection
+│   └── schema.py                    # Defines Pydantic data models and Neo4j constraints
+├── docker-compose.yml               # Orchestrating the Docker containers
+├── Dockerfile                       # Instructions for building the Python ETVL pipeline container
+├── neo4j_analytics.py               # Evaluates the Neo4j graph using the CQs
+├── neo4j_pipeline.py                # EVTL pipeline to process and load nodes/edges into Neo4j
+├── README.md                        # Project documentation and setup instructions
+├── requirements.txt                 # List of required Python dependencies
+└── .env                             # Local environment variables (needs zo be created manually)
 ```
 
 ---
