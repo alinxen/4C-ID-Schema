@@ -1,501 +1,266 @@
 import pandas as pd
-from src.schema import TACKLED, REVIEWED, CONSULTED, STUDIED, FINISHED
-from src.config import LOGFILE_CSV_PATH, TASK_CSV_PATH, COURSE_CSV_PATH, PAGES_CSV_PATH, COMPLETED_CSV_PATH, COURSE_MODULE_CSV_PATH, GRADE_GRADES_CSV_PATH
-from datetime import timedelta
+import numpy as np
+from src.config import LOGFILE_CSV_PATH, TASK_CSV_PATH, COURSE_CSV_PATH, PAGES_CSV_PATH, COMPLETED_CSV_PATH, COURSE_MODULE_CSV_PATH
 
+# =====================================================================
+# SHARED UTILITY FUNCTIONS (Used by Studied, Tackled, Reviewed, Consulted)
+# =====================================================================
 
-
-class TackledTransformer:
+def get_sessionized_data(extracted_data):
     """
-    Reads the raw logfile, calculates sessions inline, calculates accurate 
-    task durations, and returns a clean list of TACKLED relationship dictionaries.
+    Core vectorization engine. Reads logs, identifies session boundaries, 
+    applies the 2-minute fallback, and returns BOTH the bounding session 
+    data AND the individual logs tagged with their specific session_id.
     """
-
-    def execute(self):
-        df_raw = pd.read_csv(LOGFILE_CSV_PATH)
-        if df_raw.empty:
-            return []
-
-        df_clean = self._prepare_data(df_raw)
-        tackled_relations = self._process_tackled_relations(df_clean)
-        
-        return tackled_relations
-
-    def _prepare_data(self, df):
-        """Clean data globally, align timezones, and sort chronologically."""
-        df = df[['id', 'eventname', 'action', 'objectid', 'userid', 'timecreated']]
-        df['objectid'] = pd.to_numeric(df['objectid'], errors='coerce').astype('Int64')
+    df = extracted_data["logfile"].copy()
+    df = df[['id', 'eventname', 'action', 'objectid', 'userid', 'timecreated']].copy()
+    
+    if df['timecreated'].dtype != 'datetime64[ns]':
         df['timecreated'] = pd.to_datetime(df['timecreated'] + 3600, unit='s')
         
-        # Sort exactly as the LearningSessionTransformer does
-        df = df.sort_values(by=['userid', 'timecreated']).reset_index(drop=True)
-        df = df[df['userid'] >= 3]
-        
-        return df
+    df['userid'] = pd.to_numeric(df['userid'], errors='coerce')
+    df = df[df['userid'] >= 3].copy()
+    df = df.sort_values(by=['userid', 'timecreated']).reset_index(drop=True)
 
-    def _process_tackled_relations(self, df: pd.DataFrame):
-        validated_data = []
-        
-        tasks_map_df = pd.read_csv(TASK_CSV_PATH)
-        task_prefix_map = tasks_map_df.set_index('id')['name'].astype(str).str[:2].to_dict()
-        
-
-        for user_id, user_logs in df.groupby('userid'):
-            current_login_time = None
-            last_action_time   = None
-            user_sessions      = []
-
-            # 1. Rebuild the exact session windows for this user
-            for row in user_logs.itertuples():
-                if row.action == 'loggedin':
-                    if current_login_time is not None:
-                        inferred_logout = last_action_time + timedelta(minutes=2)
-                        user_sessions.append((current_login_time, inferred_logout))
-                    current_login_time = row.timecreated
-
-                elif row.action == 'loggedout':
-                    if current_login_time is not None:
-                        user_sessions.append((current_login_time, row.timecreated))
-                        current_login_time = None
-
-                last_action_time = row.timecreated
-
-            if current_login_time is not None:
-                inferred_logout = last_action_time + timedelta(minutes=2)
-                user_sessions.append((current_login_time, inferred_logout))
-
-            # 2. Process tasks within those established sessions
-            for login, logout in user_sessions:
-                session_id = f"session_{user_id}_{login.strftime('%Y-%m-%d %H:%M:%S')}"
-                
-                # Slice logs for this specific session window
-                session_mask = (user_logs['timecreated'] >= login) & (user_logs['timecreated'] <= logout)
-                session_logs = user_logs[session_mask]
-                
-                # Filter for ALL 'viewed' actions to calculate accurate exit times
-                views_mask = session_logs['action'] == 'viewed'
-                session_views = session_logs[views_mask].copy()
-                
-                if session_views.empty:
-                    continue
-                
-                # The end time of a view is the start time of the NEXT view
-                session_views['end_time'] = session_views['timecreated'].shift(-1)
-                
-                # The last view in the session ends when the session ends
-                col_idx = session_views.columns.get_loc('end_time')
-                session_views.iloc[-1, col_idx] = logout
-                
-                # NOW filter down strictly to Learning Tasks
-                task_mask = session_views['eventname'] == r'\mod_hvp\event\course_module_viewed'
-                session_tasks = session_views[task_mask]
-                
-                
-                
-                # 3. Map to Pydantic schema
-                for _, task_row in session_tasks.iterrows():
-                    start_str = task_row['timecreated'].strftime('%Y-%m-%d %H:%M:%S')
-                    end_str = task_row['end_time'].strftime('%Y-%m-%d %H:%M:%S')
-                    
-                    obj_int = int(task_row['objectid'])
-                    prefix = task_prefix_map.get(obj_int, "LT")
-                    record = {
-                        "tackled_id": f"tackled_{user_id}_{prefix}_{start_str}",
-                        "session_id": session_id,
-                        "task_id": f"{prefix}",
-                        "start_time": start_str,
-                        "end_time": end_str
-                    }
-                    validated_data.append(TACKLED(**record).model_dump())
-  
-        return validated_data
+    # 1. Block sessions by login
+    df['is_login'] = df['action'] == 'loggedin'
+    df['session_group'] = df.groupby('userid')['is_login'].cumsum()
+    df = df[df['session_group'] > 0].copy() # Drop actions before first login
     
-
-
-
-class ReviewedTransformer:
-    """
-    Processes supportive information views (mod_page), applies title-to-ID mapping,
-    checks completion status, and returns validated REVIEWED relationships for the graph.
-    """
-
-    def execute(self):
-        # 1. Load files
-        df_raw = pd.read_csv(LOGFILE_CSV_PATH)
-        if df_raw.empty:
-            return []
-
-        # 2. Prepare the mappings
-        material_id_map = self._prepare_material_mapping()
-        
-        # NEW: Prepare completion mapping
-        completed_set = self._prepare_completion_mapping()
-
-        # 3. Clean log data
-        df_clean = self._prepare_data(df_raw)
-        
-        # 4. Generate relationships
-        # NEW: Pass completed_set into the processor
-        reviewed_relations = self._process_reviewed_relations(df_clean, material_id_map, completed_set)
-        
-        return reviewed_relations
-
-    def _prepare_material_mapping(self):
-        """Builds a lookup dictionary: { original_id: mapped_si_id }"""
-        pages = pd.read_csv(PAGES_CSV_PATH, usecols=['id', 'name'], dtype={'id': str})
-        
-        mapping = pd.read_csv(COURSE_CSV_PATH, usecols=['si_id', 'supportive_title'], dtype={'si_id': str})
-        title_to_id_map = mapping.set_index('supportive_title')['si_id'].to_dict()
-        
-        pages = pages[pages['name'].str.startswith("(SI)", na=False)].copy()
-        pages['mapped_id'] = pages['name'].map(title_to_id_map).fillna(pages['id'])
-        
-        
-        return pages.set_index('id')['mapped_id'].to_dict()
-
-    def _prepare_completion_mapping(self):
-        """
-        Builds a dictionary of {(userid, original_page_id): completion_timestamp_string}
-        representing when the user explicitly marked materials as completed.
-        """
-        try:
-            completions = pd.read_csv(COMPLETED_CSV_PATH)
-            modules = pd.read_csv(COURSE_MODULE_CSV_PATH, usecols=['id', 'module', 'instance'])
-            
-            # Filter for successful completions (completionstate == 1)
-            completions = completions[completions['completionstate'] == 1]
-            
-            # Merge to get the actual page ID ('instance')
-            df_merged = completions.merge(modules, how='inner', left_on='coursemoduleid', right_on='id')
-            
-            # Filter for mod_page (module == 17)
-            completed_pages = df_merged[df_merged['module'] == 17].copy()
-            
-            # Convert the UNIX timestamp to a formatted string (matching legacy logic)
-            completed_pages['timemodified'] = pd.to_datetime(completed_pages['timemodified'], unit='s')
-            completed_pages['completion_time_str'] = completed_pages['timemodified'].dt.strftime('%Y-%m-%d %H:%M:%S')
-            
-            # Ensure the instance ID is a string so it matches our lookup keys later
-            completed_pages['instance_str'] = completed_pages['instance'].astype(str)
-            
-            # Return a dictionary: {(userid, 'instance_id'): 'YYYY-MM-DDTHH:MM:SS'}
-            return completed_pages.set_index(['userid', 'instance_str'])['completion_time_str'].to_dict()
-            
-        except FileNotFoundError:
-            print("Completion files not found. Defaulting to no completion timestamps.")
-            return {}
-
-    def _prepare_data(self, df):
-        """Standard log cleaning and student filtering."""
-        df = df[['id', 'eventname', 'action', 'objectid', 'userid', 'timecreated']]
-        df['objectid'] = df['objectid'].astype(str)
-        df['timecreated'] = pd.to_datetime(df['timecreated'] + 3600, unit='s')
-        df = df.sort_values(by=['userid', 'timecreated']).reset_index(drop=True)
-        return df[df['userid'] >= 3]
-
-    def _process_reviewed_relations(self, df, material_id_map, completed_dict):
-        validated_data = []
-
-        for user_id, user_logs in df.groupby('userid'):
-            # --- Session State Machine ---
-            current_login_time = None
-            last_action_time   = None
-            user_sessions      = []
-
-            for row in user_logs.itertuples():
-                if row.action == 'loggedin':
-                    if current_login_time is not None:
-                        user_sessions.append((current_login_time, last_action_time + timedelta(minutes=2)))
-                    current_login_time = row.timecreated
-                elif row.action == 'loggedout':
-                    if current_login_time is not None:
-                        user_sessions.append((current_login_time, row.timecreated))
-                        current_login_time = None
-                last_action_time = row.timecreated
-            
-            if current_login_time is not None:
-                user_sessions.append((current_login_time, last_action_time + timedelta(minutes=2)))
-
-            # --- Process Views within Sessions ---
-            for login, logout in user_sessions:
-                session_id = f"session_{user_id}_{login.strftime('%Y-%m-%d %H:%M:%S')}"
-                
-                session_mask = (user_logs['timecreated'] >= login) & (user_logs['timecreated'] <= logout)
-                session_views = user_logs[session_mask & (user_logs['action'] == 'viewed')].copy()
-                
-                if session_views.empty:
-                    continue
-                
-                session_views['end_time'] = session_views['timecreated'].shift(-1)
-                session_views.iloc[-1, session_views.columns.get_loc('end_time')] = logout
-                
-                page_mask = session_views['eventname'] == r'\mod_page\event\course_module_viewed'
-                session_pages = session_views[page_mask]
-                
-                for _, page_row in session_pages.iterrows():
-                    original_id = str(int(float(page_row['objectid'])))
-                    
-                    material_id = material_id_map.get(original_id)
-                    
-                    if not material_id:
-                        continue
-                    
-                    start_str = page_row['timecreated'].strftime('%Y-%m-%d %H:%M:%S')
-                    end_str = page_row['end_time'].strftime('%Y-%m-%d %H:%M:%S')
-                    
-                    time_spent_str = str((page_row['end_time'] - page_row['timecreated']).total_seconds() / 60.0)
-                    
-                    # NEW: Fetch the completion timestamp (returns None if not completed)
-                    completion_time = str(completed_dict.get((user_id, original_id)))
-                    
-                    record = {
-                        "reviewed_id": f"reviewed_{user_id}_{material_id}_{start_str}",
-                        "session_id": session_id,
-                        "si_id": material_id,
-                        "start_time": start_str,
-                        "end_time": end_str,
-                        "time_spent": time_spent_str,
-                        "completion_time": completion_time  
-                    }
-                    validated_data.append(REVIEWED(**record).model_dump())
-        return validated_data
+    # 2. Bound sessions by logout
+    df['is_logout'] = df['action'] == 'loggedout'
+    df['logout_cumsum'] = df.groupby(['userid', 'session_group'])['is_logout'].cumsum()
     
-    
-    
+    valid_mask = (df['logout_cumsum'] == 0) | ((df['logout_cumsum'] == 1) & df['is_logout'])
+    sessionized_logs = df[valid_mask].copy()
 
-class ConsultedTransformer:
-    """
-    Processes procedural information views (mod_page), applies PI-title-to-ID mapping,
-    checks completion status, and returns validated CONSULTED relationships for the graph.
-    """
+    # 3. Calculate Session Start and End Times
+    session_bounds = sessionized_logs.groupby(['userid', 'session_group']).agg(
+        session_start=('timecreated', 'first'),
+        last_action=('timecreated', 'last'),
+        has_logout=('is_logout', 'max')
+    ).reset_index()
 
-    def execute(self):
-        # 1. Load files
-        df_raw = pd.read_csv(LOGFILE_CSV_PATH)
-        if df_raw.empty:
-            return []
+    session_bounds['session_end'] = np.where(
+        session_bounds['has_logout'],
+        session_bounds['last_action'],
+        session_bounds['last_action'] + pd.Timedelta(minutes=2)
+    )
 
-        # 2. Prepare the mappings
-        material_id_map = self._prepare_procedural_mapping()
+    # 4. Generate the universal session_id
+    session_bounds['session_id'] = "session_" + session_bounds['userid'].astype(int).astype(str) + "_" + session_bounds['session_start'].dt.strftime('%Y-%m-%d %H:%M:%S')
+
+    # 5. Attach the session details back to every individual log event
+    cols_to_merge = ['userid', 'session_group', 'session_start', 'session_end', 'session_id']
+    sessionized_logs = pd.merge(sessionized_logs, session_bounds[cols_to_merge], on=['userid', 'session_group'], how='left')
+
+    return sessionized_logs, session_bounds
+
+
+def get_completion_timestamps(extracted_data):
+    """Builds a dictionary of {(userid, instance_id): 'completion_time_str'} for PI/SI pages."""
+    try:
+        completions = extracted_data["completions"].copy()
+        modules = extracted_data["modules"].copy()
         
-        # 3. Prepare completion mapping (Mirrored from ReviewedTransformer)
-        completed_dict = self._prepare_completion_mapping()
-
-        # 4. Clean logs
-        df_clean = self._prepare_data(df_raw)
+        completions = completions[completions['completionstate'] == 1]
+        df_merged = completions.merge(modules, how='inner', left_on='coursemoduleid', right_on='id')
         
-        # 5. Generate relationships
-        consulted_relations = self._process_consulted_relations(df_clean, material_id_map, completed_dict)
+        # mod_page
+        completed_pages = df_merged[df_merged['module'] == 17].copy()
+        completed_pages['timemodified'] = pd.to_datetime(completed_pages['timemodified'], unit='s')
+        completed_pages['completion_time_str'] = completed_pages['timemodified'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        completed_pages['instance_str'] = completed_pages['instance'].astype(str)
+        completed_pages['userid_str'] = completed_pages['userid'].astype(int).astype(str) # ADD THIS
         
-        return consulted_relations
+        return completed_pages.set_index(['userid_str', 'instance_str'])['completion_time_str'].to_dict()
+    except Exception:
+        return {}
 
-    def _prepare_procedural_mapping(self):
-            """Builds a lookup dictionary: { original_id (instance): mapped_pi_id }"""
-            pages = pd.read_csv(PAGES_CSV_PATH, usecols=['id', 'name'], dtype={'id': str})
-            
-            mapping = pd.read_csv(COURSE_CSV_PATH, usecols=['pi_id', 'procedural_title'], dtype={'pi_id': str})
-            title_to_id_map = mapping.set_index('procedural_title')['pi_id'].to_dict()
+
+def calculate_view_durations(sessionized_logs):
+    """Filters for 'viewed' actions and correctly calculates the end_time of the view."""
+    views = sessionized_logs[sessionized_logs['action'] == 'viewed'].copy()
+    if views.empty:
+        return views
+        
+    # The end time of a view is the start time of the NEXT view in the SAME session
+    views['end_time'] = views.groupby('session_id')['timecreated'].shift(-1)
     
-            pages_pi = pages[pages['name'].str.startswith("(PI)", na=False)].copy()
-            # Apply the mapping (fallback to IM_id if it's a (PI) page but missing from your custom mapping)
-            pages_pi['mapped_id'] = pages_pi['name'].map(title_to_id_map).fillna("IM_" + pages_pi['id'])
+    # If it's the last view in the session, the end time is the session's end time
+    views['end_time'] = views['end_time'].fillna(views['session_end'])
     
-            # Return dictionary keyed by instance ID
-            return pages_pi.set_index('id')['mapped_id'].to_dict()
+    return views
 
-    def _prepare_completion_mapping(self):
-            """
-            Builds a dictionary of {(userid, original_page_id): completion_timestamp_string}
-            representing when the user explicitly marked materials as completed.
-            """
-            try:
-                completions = pd.read_csv(COMPLETED_CSV_PATH)
-                # FIX: Ensure 'instance' is loaded here
-                modules = pd.read_csv(COURSE_MODULE_CSV_PATH, usecols=['id', 'module', 'instance'])
-                
-                # Filter for successful completions (completionstate == 1)
-                completions = completions[completions['completionstate'] == 1]
-                
-                # Merge to get the actual page ID ('instance')
-                df_merged = completions.merge(modules, how='inner', left_on='coursemoduleid', right_on='id')
-                completed_pages = df_merged[df_merged['module'] == 17].copy()
-                
-                # Convert the UNIX timestamp to a formatted string
-                completed_pages['timemodified'] = pd.to_datetime(completed_pages['timemodified'], unit='s')
-                completed_pages['completion_time_str'] = completed_pages['timemodified'].dt.strftime('%Y-%m-%d %H:%M:%S')
-                
-                # FIX: Key by instance_str instead of cmid_str
-                completed_pages['instance_str'] = completed_pages['instance'].astype(str)
-                
-                return completed_pages.set_index(['userid', 'instance_str'])['completion_time_str'].to_dict()
-                
-            except FileNotFoundError:
-                print("Completion files not found. Defaulting to no completion timestamps.")
-                return {}
-
-    def _prepare_data(self, df):
-        """Standard log cleaning."""
-        df = df[['id', 'eventname', 'action', 'objectid', 'userid', 'timecreated']]
-        df['objectid'] = df['objectid'].astype(str)
-        df['timecreated'] = pd.to_datetime(df['timecreated'] + 3600, unit='s')
-        df = df.sort_values(by=['userid', 'timecreated']).reset_index(drop=True)
-        return df[df['userid'] >= 3]
-
-    def _process_consulted_relations(self, df, material_id_map, completed_dict):
-        validated_data = []
-
-        for user_id, user_logs in df.groupby('userid'):
-            # --- Session Calculation ---
-            current_login_time = None
-            last_action_time   = None
-            user_sessions      = []
-
-            for row in user_logs.itertuples():
-                if row.action == 'loggedin':
-                    if current_login_time is not None:
-                        user_sessions.append((current_login_time, last_action_time + timedelta(minutes=2)))
-                    current_login_time = row.timecreated
-                elif row.action == 'loggedout':
-                    if current_login_time is not None:
-                        user_sessions.append((current_login_time, row.timecreated))
-                        current_login_time = None
-                last_action_time = row.timecreated
-            
-            if current_login_time is not None:
-                user_sessions.append((current_login_time, last_action_time + timedelta(minutes=2)))
-
-            # --- Relationship Mapping ---
-            for login, logout in user_sessions:
-                # Use SPACE to match LearningSession nodes
-                session_id = f"session_{user_id}_{login.strftime('%Y-%m-%d %H:%M:%S')}"
-                
-                session_mask = (user_logs['timecreated'] >= login) & (user_logs['timecreated'] <= logout)
-                session_views = user_logs[session_mask & (user_logs['action'] == 'viewed')].copy()
-                
-                if session_views.empty:
-                    continue
-                
-                session_views['end_time'] = session_views['timecreated'].shift(-1)
-                session_views.iloc[-1, session_views.columns.get_loc('end_time')] = logout
-                
-                # Filter for PI (mod_page)
-                page_mask = session_views['eventname'] == r'\mod_page\event\course_module_viewed'
-                session_pages = session_views[page_mask]
-                
-                for _, page_row in session_pages.iterrows():
-                    original_id = str(int(float(page_row['objectid'])))
-                    
-                    # Try to fetch mapped PI ID
-                    material_id = material_id_map.get(original_id)
-                    
-                    # If it's missing from the map, it's not a Procedural Information page (skip it)
-                    if not material_id:
-                        continue
-                    
-                    start_str = page_row['timecreated'].strftime('%Y-%m-%d %H:%M:%S')
-                    end_str = page_row['end_time'].strftime('%Y-%m-%d %H:%M:%S')
-                    
-                    # Calculate duration
-                    time_spent_str = str((page_row['end_time'] - page_row['timecreated']).total_seconds() / 60.0)
-                    
-                    # Fetch completion timestamp
-                    completion_time = str(completed_dict.get((user_id, original_id)))
-                    
-                    record = {
-                        "consulted_id": f"consulted_{user_id}_{material_id}_{start_str}",
-                        "session_id": session_id,
-                        "pi_id": material_id,
-                        "start_time": start_str,
-                        "end_time": end_str,
-                        "time_spent": time_spent_str,
-                        "completion_time": completion_time
-                    }
-                    validated_data.append(CONSULTED(**record).model_dump())
-        return validated_data
-    
-    
-    
+# =====================================================================
+# STUDIED TRANSFORMER
+# =====================================================================
 
 class StudiedTransformer:
-    """
-    Processes user logs to reconstruct learning sessions and returns 
-    validated STUDIED relationships connecting Students to Learning Sessions.
-    """
+    DATA = {
+        "logfile": (LOGFILE_CSV_PATH, ['id', 'eventname', 'action', 'objectid', 'userid', 'timecreated'])
+    }
 
-    def execute(self):
-        # 1. Load files
-        df_raw = pd.read_csv(LOGFILE_CSV_PATH)
-        if df_raw.empty:
-            return []
-
-        # 2. Clean log data
-        df_clean = self._prepare_data(df_raw)
+    def execute(self, extracted_data):
+        # Utilizes shared logic to independently calculate sessions
+        _, session_bounds = get_sessionized_data(extracted_data)
         
-        # 3. Generate relationships
-        studied_relations = self._process_studied_relations(df_clean)
+        if session_bounds.empty:
+            return pd.DataFrame()
+
+        df = session_bounds.copy()
+        df['student_id'] = df['userid'].astype(int).astype(str)
+        df['start_time'] = df['session_start'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        df['end_time']   = df['session_end'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        df['duration']   = ((df['session_end'] - df['session_start']).dt.total_seconds() / 60.0).astype(str)
         
-        return studied_relations
+        df['studied_id'] = "studied_" + df['student_id'] + "_" + df['start_time']
 
-    def _prepare_data(self, df):
-        """Standard log cleaning and student filtering."""
-        # We only need action, userid, and timecreated to build sessions
-        df = df[['action', 'userid', 'timecreated']]
-        df['timecreated'] = pd.to_datetime(df['timecreated'] + 3600, unit='s')
-        df = df.sort_values(by=['userid', 'timecreated']).reset_index(drop=True)
+        cols = ['studied_id', 'student_id', 'session_id', 'start_time', 'end_time', 'duration']
+        return df[cols].copy().astype(str)
+
+# =====================================================================
+# TACKLED TRANSFORMER
+# =====================================================================
+
+class TackledTransformer:
+    DATA = {
+        "logfile": (LOGFILE_CSV_PATH, ['id', 'eventname', 'action', 'objectid', 'userid', 'timecreated']),
+        "tasks": (TASK_CSV_PATH, ['id', 'name'])
+    }
+
+    def execute(self, extracted_data):
+        # 1. Independent session evaluation
+        sessionized_logs, _ = get_sessionized_data(extracted_data)
         
-        # Filter out guest and admin accounts (IDs 1 and 2)
-        return df[df['userid'] >= 3]
+        # 2. Vectorized view duration calculation
+        views = calculate_view_durations(sessionized_logs)
+        if views.empty: return pd.DataFrame()
 
-    def _process_studied_relations(self, df):
-        validated_data = []
+        # 3. Filter for Learning Tasks
+        tasks = views[views['eventname'] == r'\mod_hvp\event\course_module_viewed'].copy()
+        if tasks.empty: return pd.DataFrame()
 
-        for user_id, user_logs in df.groupby('userid'):
-            # --- Session State Machine ---
-            current_login_time = None
-            last_action_time   = None
-            user_sessions      = []
+        # 4. Map task prefixes (Using your exact 2-letter logic)
+        tasks_map_df = extracted_data["tasks"].copy()
+        task_prefix_map = tasks_map_df.set_index('id')['name'].astype(str).str[:2].to_dict()
+        
+        tasks['objectid_int'] = pd.to_numeric(tasks['objectid'], errors='coerce')
+        tasks['task_id'] = tasks['objectid_int'].map(task_prefix_map).fillna("LT")
+        
+        # 5. Schema formatting
+        tasks['student_id'] = tasks['userid'].astype(int).astype(str)
+        tasks['start_time'] = tasks['timecreated'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        tasks['end_time']   = tasks['end_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        
+        tasks['tackled_id'] = "tackled_" + tasks['student_id'] + "_" + tasks['task_id'] + "_" + tasks['start_time']
+        tasks['time_spent'] = ((pd.to_datetime(tasks['end_time']) - pd.to_datetime(tasks['start_time'])).dt.total_seconds() / 60.0).astype(str)
 
-            for row in user_logs.itertuples():
-                if row.action == 'loggedin':
-                    if current_login_time is not None:
-                        # Close previous session that missed a logout
-                        user_sessions.append((current_login_time, last_action_time + timedelta(minutes=2)))
-                    current_login_time = row.timecreated
-                elif row.action == 'loggedout':
-                    if current_login_time is not None:
-                        # Close session normally
-                        user_sessions.append((current_login_time, row.timecreated))
-                        current_login_time = None
-                last_action_time = row.timecreated
-            
-            # Close any dangling session at the very end of the user's logs
-            if current_login_time is not None:
-                user_sessions.append((current_login_time, last_action_time + timedelta(minutes=2)))
+        cols = ['tackled_id', 'session_id', 'task_id', 'start_time', 'end_time', 'time_spent']
+        return tasks[cols].copy().astype(str)
 
-            # --- Relationship Mapping ---
-            for login, logout in user_sessions:
-                start_str = login.strftime('%Y-%m-%d %H:%M:%S')
-                end_str = logout.strftime('%Y-%m-%d %H:%M:%S')
-                
-                # Match the exact session_id format used in Reviewed/Consulted Transformers
-                session_id = f"session_{user_id}_{start_str}"
-                
-                # I calculated the total session duration for you as a string, 
-                # just in case you want it on the edge for analytics!
-                duration_minutes = str((logout - login).total_seconds() / 60.0)
+# =====================================================================
+# REVIEWED TRANSFORMER (Supportive Information)
+# =====================================================================
 
-                record = {
-                    "studied_id": f"studied_{user_id}_{start_str}",
-                    "student_id": str(user_id),
-                    "session_id": session_id,
-                    "start_time": start_str,
-                    "end_time": end_str,
-                    "duration": duration_minutes
-                }
-                
-                # Assuming you have a Pydantic model named STUDIED
-                validated_data.append(STUDIED(**record).model_dump())
-                validated_data.append(record)
-        return validated_data
-    
-    
+class ReviewedTransformer:
+    DATA = {
+        "logfile": (LOGFILE_CSV_PATH, ['id', 'eventname', 'action', 'objectid', 'userid', 'timecreated']),
+        "pages": (PAGES_CSV_PATH, ['id', 'name']),
+        "blueprint": (COURSE_CSV_PATH, ['si_id', 'supportive_title']),
+        "completions": (COMPLETED_CSV_PATH, ['userid', 'coursemoduleid', 'completionstate', 'timemodified']),
+        "modules": (COURSE_MODULE_CSV_PATH, ['id', 'module', 'instance'])
+    }
+
+    def execute(self, extracted_data):
+        sessionized_logs, _ = get_sessionized_data(extracted_data)
+        views = calculate_view_durations(sessionized_logs)
+        
+        # Filter for mod_page
+        pages = views[views['eventname'] == r'\mod_page\event\course_module_viewed'].copy()
+        if pages.empty: return pd.DataFrame()
+
+        # Build SI Map
+        pages_df = extracted_data["pages"].copy()
+        pages_df = pages_df[pages_df['name'].str.startswith("(SI)", na=False)]
+        
+        blueprint = extracted_data["blueprint"].copy()
+        title_to_id = blueprint.set_index('supportive_title')['si_id'].to_dict()
+        
+        pages_df['mapped_id'] = pages_df['name'].map(title_to_id).fillna("SI_" + pages_df['id'].astype(str))
+        si_map = pages_df.set_index('id')['mapped_id'].to_dict()
+
+        # Apply mapping and filter
+        pages['objectid_int'] = pd.to_numeric(pages['objectid'], errors='coerce')
+        pages['si_id'] = pages['objectid_int'].map(si_map)
+        pages = pages[pages['si_id'].notna()].copy() # Drop pages that aren't SI
+
+        # Build Schema
+        completed_dict = get_completion_timestamps(extracted_data)
+        pages['student_id'] = pages['userid'].astype(int).astype(str)
+        pages['start_time'] = pages['timecreated'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        pages['end_time']   = pages['end_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        pages['time_spent'] = ((pd.to_datetime(pages['end_time']) - pd.to_datetime(pages['start_time'])).dt.total_seconds() / 60.0).astype(str)
+        
+        # Fetch completion times
+        pages['instance_str'] = pages['objectid_int'].astype(str)
+        pages['userid_str'] = pages['userid'].astype(int).astype(str) # ADD THIS
+        pages['completion_time'] = pages.set_index(['userid_str', 'instance_str']).index.map(completed_dict)
+        pages['completion_time'] = pages['completion_time'].fillna("")
+        pages['reviewed_id'] = "reviewed_" + pages['student_id'] + "_" + pages['si_id'] + "_" + pages['start_time']
+
+        cols = ['reviewed_id', 'session_id', 'si_id', 'start_time', 'end_time', 'time_spent', 'completion_time']
+        return pages[cols].copy().astype(str)
+
+# =====================================================================
+# CONSULTED TRANSFORMER (Procedural Information)
+# =====================================================================
+
+class ConsultedTransformer:
+    DATA = {
+        "logfile": (LOGFILE_CSV_PATH, ['id', 'eventname', 'action', 'objectid', 'userid', 'timecreated']),
+        "pages": (PAGES_CSV_PATH, ['id', 'name']),
+        "blueprint": (COURSE_CSV_PATH, ['pi_id', 'procedural_title']),
+        "completions": (COMPLETED_CSV_PATH, ['userid', 'coursemoduleid', 'completionstate', 'timemodified']),
+        "modules": (COURSE_MODULE_CSV_PATH, ['id', 'module', 'instance'])
+    }
+
+    def execute(self, extracted_data):
+        sessionized_logs, _ = get_sessionized_data(extracted_data)
+        views = calculate_view_durations(sessionized_logs)
+        
+        # Filter for mod_page
+        pages = views[views['eventname'] == r'\mod_page\event\course_module_viewed'].copy()
+        if pages.empty: return pd.DataFrame()
+
+        # Build PI Map
+        pages_df = extracted_data["pages"].copy()
+        pages_df = pages_df[pages_df['name'].str.startswith("(PI)", na=False)]
+        
+        blueprint = extracted_data["blueprint"].copy()
+        title_to_id = blueprint.set_index('procedural_title')['pi_id'].to_dict()
+        
+        pages_df['mapped_id'] = pages_df['name'].map(title_to_id).fillna("PI_" + pages_df['id'].astype(str))
+        pi_map = pages_df.set_index('id')['mapped_id'].to_dict()
+        
+        # Apply mapping and filter
+        pages['objectid_int'] = pd.to_numeric(pages['objectid'], errors='coerce')
+        pages['pi_id'] = pages['objectid_int'].map(pi_map)
+        pages = pages[pages['pi_id'].notna()].copy() # Drop pages that aren't PI
+
+        # Build Schema
+        completed_dict = get_completion_timestamps(extracted_data)
+        pages['student_id'] = pages['userid'].astype(int).astype(str)
+        pages['start_time'] = pages['timecreated'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        pages['end_time']   = pages['end_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        pages['time_spent'] = ((pd.to_datetime(pages['end_time']) - pd.to_datetime(pages['start_time'])).dt.total_seconds() / 60.0).astype(str)
+        
+        # Fetch completion times
+        pages['instance_str'] = pages['objectid_int'].astype(str)
+        pages['userid_str'] = pages['userid'].astype(int).astype(str) # ADD THIS
+        pages['completion_time'] = pages.set_index(['userid_str', 'instance_str']).index.map(completed_dict)
+        pages['completion_time'] = pages['completion_time'].fillna("")
+        pages['consulted_id'] = "consulted_" + pages['student_id'] + "_" + pages['pi_id'] + "_" + pages['start_time']
+
+        cols = ['consulted_id', 'session_id', 'pi_id', 'start_time', 'end_time', 'time_spent', 'completion_time']
+        return pages[cols].copy().astype(str)

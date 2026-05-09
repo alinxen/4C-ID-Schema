@@ -61,7 +61,7 @@ class LEARNING_SESSION(BaseModel):
     session_id              : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
     start_time              : str
     end_time                : str
-    student_id              : int
+    student_id              : str
     
 class STUDENT(BaseModel):
     label                   : ClassVar[str] = "Student"
@@ -204,6 +204,7 @@ class TACKLED(BaseModel):
     task_id                 : str     
     start_time              : str
     end_time                : str
+    time_spent              : str
     
 class REVIEWED(BaseModel):
     label                   : ClassVar[str] = "REVIEWED"

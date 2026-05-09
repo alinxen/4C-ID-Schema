@@ -14,16 +14,16 @@ import src.transformers as tf
 # -------------------------------------------------------
 
 NODE_PIPELINE = [
-    ("SKILL",                   tf.SkillTransformer),
-    ("STUDENT",                 tf.StudentTransformer),
-    ("KNOWLEDGE",               tf.KnowledgeTransformer),
-    ("TASK_CLASS",              tf.TaskClassTransformer),
-    ("COMPETENCE",              tf.CompetenceTransformer), 
-    ("LEARNING_TASK",           tf.TaskTransformer),
-    ("LEARNING_SESSION",        tf.LearningSessionTransformer),
-    ("PART_TASK_PRACTICE",      tf.PracticeTransformer),
-    ("SUPPORTIVE_INFORMATION",  tf.SupportiveTransformer),
-    ("PROCEDURAL_INFORMATION",  tf.ProceduralTransformer)
+    ("COMPETENCE",             tf.CompetenceTransformer),
+    ("KNOWLEDGE",              tf.KnowledgeTransformer),
+    ("LEARNING_SESSION",       tf.LearningSessionTransformer),
+    ("LEARNING_TASK",          tf.TaskTransformer),
+    ("PART_TASK_PRACTICE",     tf.PracticeTransformer),
+    ("PROCEDURAL_INFORMATION", tf.ProceduralTransformer),
+    ("SKILL",                  tf.SkillTransformer),
+    ("STUDENT",                tf.StudentTransformer),
+    ("SUPPORTIVE_INFORMATION", tf.SupportiveTransformer),
+    ("TASK_CLASS",             tf.TaskClassTransformer)
 ]
 
 # ---------------------------------------------------------
@@ -31,27 +31,25 @@ NODE_PIPELINE = [
 # ---------------------------------------------------------
 
 EDGE_PIPELINE = [
-    ("CUES",                tf.CuesTransformer),
-    ("TRAINS",              tf.TrainsTransformer),
-    ("OFFERS",              tf.OffersTransformer),
-    ("GROUPS",              tf.GroupsTransformer),
-    ("STUDIED",             tf.StudiedTransformer),
-    ("PROVIDES",            tf.ProvidesTransformer),
-    ("INCLUDES",            tf.IncludesTransformer),
-    ("FINISHED",            tf.FinishedTransformer),
-    ("ATTEMPTED",           tf.AttemptedTransformer),
-    ("REFERENCES",          tf.ReferencesTransformer),
-    ("REQUIRES_SKILL",      tf.RequiresSTransformer),
-    ("PRACTICES_SKILL",     tf.PracticesTransformer),
     ("APPLIES_KNOWLEDGE",   tf.AppliesTransformer),
-    ("REQUIRES_KNOWLEDGE",  tf.RequiresKTransformer),
+    ("ATTEMPTED",           tf.AttemptedTransformer),
+    ("CONSULTED",           tf.ConsultedTransformer),
+    ("CUES",                tf.CuesTransformer),
     ("DEVELOPS_COMPETENCE", tf.DevelopsTransformer),
-
-  #  ("TACKLED",             tf.TackledTransformer),
-    
-   # ("REVIEWED",            tf.ReviewedTransformer),
-   # ("CONSULTED",           tf.ConsultedTransformer),
-    ]
+    ("FINISHED",            tf.FinishedTransformer),
+    ("GROUPS",              tf.GroupsTransformer),
+    ("INCLUDES",            tf.IncludesTransformer),
+    ("OFFERS",              tf.OffersTransformer),
+    ("PRACTICES_SKILL",     tf.PracticesTransformer),
+    ("PROVIDES",            tf.ProvidesTransformer),
+    ("REFERENCES",          tf.ReferencesTransformer),
+    ("REQUIRES_KNOWLEDGE",  tf.RequiresKTransformer),
+    ("REQUIRES_SKILL",      tf.RequiresSTransformer),
+    ("REVIEWED",            tf.ReviewedTransformer),
+    ("STUDIED",             tf.StudiedTransformer),
+    ("TACKLED",             tf.TackledTransformer),
+    ("TRAINS",              tf.TrainsTransformer)
+]
 
 # ---------------------------------------------------------
 #                        PIPELINE
