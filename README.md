@@ -3,12 +3,6 @@
 
 This project provides an automated data pipeline to import simulated Moodle data into a Neo4j knowledge graph using the 4C/ID instructional design model. 
 
-
-The system relies on two Docker containers:
-1. **`graph-db`**: A Neo4j database.
-2. **`neo4j-pipeline`**: A Python container that extracts CSV data, validates it using Pydantic schemas, and loads the nodes and edges into the database.
-
-
 The system relies on three Docker containers:
 1. **`graph-db`**: The Neo4j database instance.
 2. **`neo4j-pipeline`**: A Python container that extracts CSV data, validates it using Pydantic schemas, and loads the nodes and edges into the database.
@@ -47,7 +41,7 @@ main/
 │   └── schema.py                    # Defines Pydantic data models and Neo4j constraints
 ├── docker-compose.yml               # Orchestrating the Docker containers
 ├── Dockerfile                       # Instructions for building the Python ETVL pipeline container
-├── neo4j_analytics.py               # Evaluates the Neo4j graph using the CQs
+├── neo4j_analytics.py               # Evaluates the Neo4j graph using the CQs -> creates a Jupyter Notebook
 ├── neo4j_pipeline.py                # EVTL pipeline to process and load nodes/edges into Neo4j
 ├── README.md                        # Project documentation and setup instructions
 ├── requirements.txt                 # List of required Python dependencies
