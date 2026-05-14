@@ -13,3 +13,6 @@ COMPLETED_CSV_PATH      = os.path.join(DATA_DIR,  "m_course_modules_completion.c
 COURSE_MODULE_CSV_PATH  = os.path.join(DATA_DIR,  "m_course_modules.csv")
 GRADE_GRADES_CSV_PATH   = os.path.join(DATA_DIR,  "m_grade_grades.csv")
 
+ANALYTICS_DIR           = os.path.join(os.path.dirname(__file__), "analytics")
+CQ_PATH                 = os.path.join(ANALYTICS_DIR, "competence_questions.csv")
+QUERIES_PATH            = os.path.join(ANALYTICS_DIR, "cypher_queries.yaml")

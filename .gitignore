@@ -20,3 +20,6 @@ __pycache__/
 
 # Tree creator
 .tree-descriptions.json
+
+# Jupyter notebook
+*ipynb

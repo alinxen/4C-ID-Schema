@@ -3,9 +3,19 @@
 
 This project provides an automated data pipeline to import simulated Moodle data into a Neo4j knowledge graph using the 4C/ID instructional design model. 
 
+
 The system relies on two Docker containers:
 1. **`graph-db`**: A Neo4j database.
 2. **`neo4j-pipeline`**: A Python container that extracts CSV data, validates it using Pydantic schemas, and loads the nodes and edges into the database.
+
+
+The system relies on three Docker containers:
+1. **`graph-db`**: The Neo4j database instance.
+2. **`neo4j-pipeline`**: A Python container that extracts CSV data, validates it using Pydantic schemas, and loads the nodes and edges into the database.
+3. **`neo4j-analytics`**: A Python container that generates a notebook to evaluate the schema based on predefined Competence Questions (CQs).
+
+
+
 
 ---
 
@@ -68,14 +78,15 @@ You can run this project in two different ways depending on your workflow.
 
 If you have [Docker Desktop](https://www.docker.com/products/docker-desktop) installed, you do not need to install Python or set up a local database.
 
-1. Open a terminal in this folder.
-2. Run the following command to build the pipeline and start the database:
+1. Ensure that Docker Desktop is running.
+2. Open a terminal in this project folder and run:
    ```bash
    docker compose up --build
    ```
-3. Docker will automatically start Neo4j, wait for it to be fully loaded (healthcheck), and then execute the Python pipeline to import the Moodle data.
-4. Once the pipeline finishes, open **http://localhost:7474** in your web browser.
-5. Log in using the username **`neo4j`** and the password you defined in your `.env` file.
+3. Docker will automatically start the Neo4j database, wait for it to be fully loaded (healthcheck), then execute the ETVL pipeline to import the Moodle data into the graph, and finally spin up a Jupyter environment. 
+4. Once the pipeline finishes, you can explore the Neo4j graph database by visiting **http://localhost:7474**. Log in using the username **`neo4j`** and the password you defined in your `.env` file.
+5. Finally, you can navigate to the Analytics Notebook at **http://localhost:8888**. Select the file **`Schema_Evaluation.ipynb`** and login using the token **`analytics`**.
+6. Execute the cells in the notebook to view the Competence Questions, their corresponding Cypher queries, and the resulting dataframes.
 
 ### Option 2: The Manual Way (Local Python Development)
 *Best for anyone who wants to add their own data or modify the schema.*
@@ -92,7 +103,7 @@ If you prefer to run the Python code locally using your own virtual environment:
    pip install -r requirements.txt
    ```
 4. Open the project in your preferred IDE and run the `neo4j_pipeline.py` script locally.
-
+5. Finally, run the `neo4j_analytics` script to generate the Analytics Notebook **`Schema_Evaluation.ipynb`** and open it using JupyterLab.
 ---
 
 ## Common Troubleshooting
@@ -101,3 +112,6 @@ If you prefer to run the Python code locally using your own virtual environment:
 * **Cause:** The Python script ran before the database finished booting up. Neo4j takes about 15–30 seconds to start.
 * **Fix:** Wait a few seconds and run `docker compose run --rm neo4j-pipeline` to execute the script again. (If using `docker compose up`, the built-in healthcheck should prevent this automatically).
 
+**Issue: `Permission Denied` when generating the Jupyter Notebook (Often on Windows)**
+* **Cause:** Docker does not have the correct file sharing permissions to write the generated notebook back to your local host folder via the volume mount.
+* **Fix:** Ensure you are running your terminal/command prompt as an Administrator, or check your Docker Desktop settings under "Settings > Resources > File Sharing" to ensure the project drive is permitted.

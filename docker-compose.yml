@@ -29,9 +29,27 @@ services:
   neo4j-pipeline:
     build: .
     depends_on:
-      graph-db:                                        # Tells Docker to start the database first
-        condition: service_healthy                     # Waits for healthcheck, aka until Neo4j is actually running
+        graph-db:                                      # Tells Docker to start the database first
+            condition: service_healthy                 # Waits for healthcheck, aka until Neo4j is actually running
     environment:
       - NEO4J_URI=bolt://graph-db:7687                 # Matches the service name above
       - NEO4J_USER=neo4j                               # Passes the username so database.py finds it
       - NEO4J_PASSWORD=${NEO4J_PASSWORD}               # Passes the password so database.py finds it
+
+  neo4j-analytics:
+    build: .
+    depends_on:
+       neo4j-pipeline:
+            condition: service_completed_successfully
+    environment:
+      - NEO4J_URI=bolt://graph-db:7687                 # Matches the service name above
+      - NEO4J_USER=neo4j                               # Passes the username so database.py finds it
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}               # Passes the password so database.py finds it
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/app
+    # This generates the notebook, then starts the server
+    command: >
+      bash -c "python neo4j_analytics.py &&
+               jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --ServerApp.token='analytics' --ServerApp.password=''"

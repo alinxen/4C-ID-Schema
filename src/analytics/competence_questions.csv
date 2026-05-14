@@ -1,71 +1,72 @@
-Catalog;Question_ID;Question
-A;CQ01;How much time did the students spend in the course?
-A;CQ02;What percentage of the tasks / information material was completed by the students?
-A;CQ03;Which tasks were worked on by the students?
-A;CQ04;Which tasks had the most attempts? (overall / good attempts / bad attempts)
-A;CQ05;Are there exercises where all students perform well / poorly?
-A;CQ06;What types of errors are made in tasks with poor results?
-A;CQ07;Are there tasks where a large proportion of the students make the same mistakes?
-A;CQ08;Do students perform worse on certain question types than on others?
-A;CQ09;Is the success rate for a task higher if the corresponding Supportive Information was read beforehand?
-A;CQ10;Is the success rate for a task higher if the corresponding Procedural Information was read shortly beforehand?
-A;CQ11;Are information materials belonging to a task also worked on in temporal proximity to the task?
-A;CQ12;What is done after very poor attempts? (leaving the course / accessing the corresponding information pages ...)
-A;CQ13;What is the average total score?
-A;CQ14;What are the tasks with the highest / lowest average scores?
-A;CQ15;How many students look directly at the result of a task without submitting a solution attempt?
-A;CQ16;Which information material was worked on by the students at all?
-A;CQ17;Which information material was marked as completed?
-A;CQ18;When do the students learn? (temporal distribution in the semester)
-A;CQ19;How long are the average learning sessions?
-A;CQ20;Which course contents are spent the most time on?
-A;CQ21;What percentage of the time spent in the learning unit is allocated to tasks / Procedural Information / Supportive Information?
-A;CQ22;Are learning profiles emerging?
-A;CQ23;Which competences are taught in the learning unit?
-A;CQ24;Which skills are taught or required for the solution in the learning unit, and at which level of cognitive processes?
-A;CQ25;Which knowledge elements are taught or required for the solution in the learning unit, and in which knowledge dimension?
-A;CQ26;With which competences / skills / knowledge elements were there difficulties?
-A;CQ27;Which competences / skills / knowledge elements were successfully taught?
-B;CQ28;How much time did the student spend in the course?
-B;CQ29;When, how often, and for how long did the student learn?
-B;CQ30;With which content did the student spend the most time?
-B;CQ31;Which tasks did the student work on?
-B;CQ32;For which tasks did the student submit a solution attempt?
-B;CQ33;With which tasks did the student have difficulties (less than 80 percent of the points in the first attempt)?
-B;CQ34;Which tasks did the student find easy?
-B;CQ35;How long did the student spend on a task?
-B;CQ36;Which tasks did the student work on multiple times?
-B;CQ37;What percentage of the tasks did the student work on multiple times?
-B;CQ38;How did the achieved score develop over multiple solution attempts for a task?
-B;CQ39;What did the student work on between multiple solution attempts for a task?
-B;CQ40;Were there tasks where the student marked a task as completed but did not submit a solution attempt?
-B;CQ41;Which Supportive Information did the student work on?
-B;CQ42;Which Procedural Information did the student work on?
-B;CQ43;In what order did the student work on the tasks and the information material?
-B;CQ44;Did the student look at Procedural Information related to the task?
-B;CQ45;Did the student look at the Supportive Information related to a task before working on the task?
-B;CQ46;What percentage of the course did the student complete?
-B;CQ47;What percentage of the total score did the student achieve?
-B;CQ48;What percentage of the achievable points in the tasks they worked on did the student achieve?
-B;CQ49;Which competences / skills / knowledge elements does a student possess?
-C;CQ50;By what percentage of the students was a task / Procedural Information page / Supportive Information page accessed?
-C;CQ51;By what percentage of the students was a task / Procedural Information page / Supportive Information page completed?
-C;CQ52;By what percentage of the students was a solution attempt submitted for a task?
-C;CQ53;How much time on average was spent on a task / Procedural Information page / Supportive Information page?
-C;CQ54;How much time in total was spent on a task / Procedural Information page / Supportive Information page?
-C;CQ55;How many solution attempts on average were submitted for a task?
-C;CQ56;How many points on average were scored on a task?
-C;CQ57;When in the temporal progression of the course was a task / Procedural Information page / Supportive Information page accessed?
-C;CQ58;Are there students who marked a task as completed but did not submit a solution attempt for it?
-C;CQ59;What incorrect answers were submitted for a task?
-C;CQ60;Which students had difficulties solving a task?
-D;CQ61;In which tasks is a competence / a skill / a knowledge element trained?
-D;CQ62;What percentage of the students practiced a competence / a skill / a knowledge element during the course?
-D;CQ63;How much time in total was spent on tasks that train a competence / a skill / a knowledge element?
-D;CQ64;How successful were the students in tasks that train a competence / a skill / a knowledge element?
-D;CQ65;Were better results achieved in later tasks requiring a competence / a skill / a knowledge element than in earlier tasks?
-D;CQ66;Which students had difficulties with a competence / a skill / a knowledge element?
-D;CQ67;Which cognitive processes are required in which tasks regarding a skill?
-D;CQ68;Are worse results achieved on tasks requiring a higher level of cognitive processes regarding a skill than on tasks requiring lower levels regarding the same skill?
-D;CQ69;In which knowledge dimension is a knowledge element required in which tasks?
-D;CQ70;Are worse results achieved on tasks requiring a higher knowledge dimension regarding a knowledge element than on tasks requiring a lower knowledge dimension regarding the same knowledge element?
+Question_ID;Question
+1.01;Which percentage of the learning tasks did each student complete?
+1.02;How many students look directly at the result of a task without submitting a solution attempt?
+1.03;Which tasks did each student work on?
+1.04;Which tasks had the most attempts?
+1.05;Are there learning tasks where all students perform poorly?
+1.06;What types of errors are made in tasks with poor results?
+1.07;Are there tasks where a large proportion of the students make the same mistakes?
+1.08;Do students perform worse on certain question types than on others?
+1.09;Is the success rate for a task higher if the corresponding Supportive Information was read beforehand?
+1.10;
+1.11;Is supportive information connected to a learning task reviewed in temporal proximity to the task?
+1.12;What do students do after a failed attempt?
+1.13;What is the average total score?
+1.14;What are the tasks with the highest or lowest average scores?
+1.15;How much time did the students spend in the course?
+1.16;Which information material was worked on by the students?
+1.17;Which information material was marked as completed?
+1.18;When do the students study?
+1.19;How long is an average learning session?
+1.20;What is the total time spent on each content?
+1.21;Which course contents are spent the most time on?
+1.22;Are learning profiles emerging?
+1.23;Which competences are taught in the learning unit?
+1.24;Which skills are taught or required for the solution in the learning unit, and at which level of cognitive processes?
+1.25;Which knowledge elements are taught or required for the solution in the learning unit, and in which knowledge dimension?
+1.26;Which competences / skills / knowledge elements had the most failed attempts?
+1.27;Which competences / skills / knowledge elements were successfully taught?
+2.01;How much time did the student spend in the course?
+2.02;When, how often, and for how long did the student learn?
+2.03;With which content did the student spend the most time?
+2.04;Which tasks did the student work on?
+2.05;For which tasks did the student submit a solution attempt?
+2.06;With which tasks did the student have difficulties (less than 80 percent of the points in the first attempt)?
+2.07;Which tasks did the student find easy?
+2.08;How long did the student spend on a task?
+2.09;Which tasks did the student work on multiple times?
+2.10;What percentage of the tasks did the student work on multiple times?
+2.11;How did the student’s score develop over multiple attempts
+for a task to achieve a specific competence?
+2.12;What did the student work on between multiple solution attempts for a task?
+2.13;Were there tasks where the student marked a task as completed but did not submit a solution attempt?
+2.14;Which Supportive Information did the student work on?
+2.15;Which Procedural Information did the student work on?
+2.16;In what order did the student work on the tasks and the information material?
+2.17;Did the student look at Procedural Information related to the task?
+2.18;Did the student look at the Supportive Information related to a task before working on the task?
+2.19;What percentage of the course did the student complete?
+2.20;What percentage of the total score did the student achieve?
+2.21;What percentage of the achievable points in the tasks they worked on did the student achieve?
+2.22;Which competences / skills / knowledge elements does a student possess?
+3.01;By what percentage of the students was a task / Procedural Information page / Supportive Information page accessed?
+3.02;By what percentage of the students was a task / Procedural Information page / Supportive Information page completed?
+3.03;By what percentage of the students was a solution attempt submitted for a task?
+3.04;How much time on average was spent on a task / Procedural Information page / Supportive Information page?
+3.05;How much time in total was spent on a task / Procedural Information page / Supportive Information page?
+3.06;How many solution attempts on average were submitted for a task?
+3.07;How many points on average were scored on a task?
+3.08;When in the temporal progression of the course was a task / Procedural Information page / Supportive Information page accessed?
+3.09;Are there students who marked a task as completed but did not submit a solution attempt for it?
+3.10;What incorrect answers were submitted for a task?
+3.11;Which students had difficulties solving a task?
+4.01;In which tasks is a competence / a skill / a knowledge element trained?
+4.02;What percentage of the students practiced a competence / a skill / a knowledge element during the course?
+4.03;How much time in total was spent on tasks that train a competence / a skill / a knowledge element?
+4.04;How successful were the students in tasks that train a competence / a skill / a knowledge element?
+4.05;Were better results achieved in later tasks requiring a competence / a skill / a knowledge element than in earlier tasks?
+4.06;Which students had difficulties with a competence / a skill / a knowledge element?
+4.07;Which cognitive processes are required in which tasks regarding a skill?
+4.08;Are worse results achieved on tasks requiring a higher level of cognitive processes regarding a skill than on tasks requiring lower levels regarding the same skill?
+4.09;In which knowledge dimension is a knowledge element required in which tasks?
+4.10;Are worse results achieved on tasks requiring a higher knowledge dimension regarding a knowledge element than on tasks requiring a lower knowledge dimension regarding the same knowledge element?

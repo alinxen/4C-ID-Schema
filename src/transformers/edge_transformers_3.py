@@ -48,7 +48,7 @@ def get_sessionized_data(extracted_data):
     )
 
     # 4. Generate the universal session_id
-    session_bounds['session_id'] = "session_" + session_bounds['userid'].astype(int).astype(str) + "_" + session_bounds['session_start'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    session_bounds['session_id'] = "session_" + session_bounds['userid'].astype(int).astype(str) + "_" + session_bounds['session_start'].dt.strftime('%Y-%m-%dT%H:%M:%S')
 
     # 5. Attach the session details back to every individual log event
     cols_to_merge = ['userid', 'session_group', 'session_start', 'session_end', 'session_id']
@@ -68,13 +68,20 @@ def get_completion_timestamps(extracted_data):
         
         # mod_page
         completed_pages = df_merged[df_merged['module'] == 17].copy()
+        if completed_pages.empty:
+            return {}
+            
         completed_pages['timemodified'] = pd.to_datetime(completed_pages['timemodified'], unit='s')
-        completed_pages['completion_time_str'] = completed_pages['timemodified'].dt.strftime('%Y-%m-%d %H:%M:%S')
-        completed_pages['instance_str'] = completed_pages['instance'].astype(str)
-        completed_pages['userid_str'] = completed_pages['userid'].astype(int).astype(str) # ADD THIS
+        # Use a space between date and time to match your original legacy format exactly
+        completed_pages['completion_time_str'] = completed_pages['timemodified'].dt.strftime('%Y-%m-%dT%H:%M:%S') 
+        
+        # FIX: Force Int64 to drop the '.0' float artifact before stringifying
+        completed_pages['instance_str'] = pd.to_numeric(completed_pages['instance'], errors='coerce').astype('Int64').astype(str)
+        completed_pages['userid_str']   = pd.to_numeric(completed_pages['userid'], errors='coerce').astype('Int64').astype(str)
         
         return completed_pages.set_index(['userid_str', 'instance_str'])['completion_time_str'].to_dict()
-    except Exception:
+    except Exception as e:
+        print(f"Completion Mapping Warning: {e}")
         return {}
 
 
@@ -110,8 +117,8 @@ class StudiedTransformer:
 
         df = session_bounds.copy()
         df['student_id'] = df['userid'].astype(int).astype(str)
-        df['start_time'] = df['session_start'].dt.strftime('%Y-%m-%d %H:%M:%S')
-        df['end_time']   = df['session_end'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        df['start_time'] = df['session_start'].dt.strftime('%Y-%m-%dT%H:%M:%S')
+        df['end_time']   = df['session_end'].dt.strftime('%Y-%m-%dT%H:%M:%S')
         df['duration']   = ((df['session_end'] - df['session_start']).dt.total_seconds() / 60.0).astype(str)
         
         df['studied_id'] = "studied_" + df['student_id'] + "_" + df['start_time']
@@ -130,28 +137,26 @@ class TackledTransformer:
     }
 
     def execute(self, extracted_data):
-        # 1. Independent session evaluation
         sessionized_logs, _ = get_sessionized_data(extracted_data)
-        
-        # 2. Vectorized view duration calculation
         views = calculate_view_durations(sessionized_logs)
         if views.empty: return pd.DataFrame()
 
-        # 3. Filter for Learning Tasks
+        # Filter for Learning Tasks
         tasks = views[views['eventname'] == r'\mod_hvp\event\course_module_viewed'].copy()
         if tasks.empty: return pd.DataFrame()
 
-        # 4. Map task prefixes (Using your exact 2-letter logic)
+        # FIX: Safe ID string mapping 
         tasks_map_df = extracted_data["tasks"].copy()
-        task_prefix_map = tasks_map_df.set_index('id')['name'].astype(str).str[:2].to_dict()
+        tasks_map_df['id_clean'] = pd.to_numeric(tasks_map_df['id'], errors='coerce').astype('Int64').astype(str)
+        task_prefix_map = tasks_map_df.set_index('id_clean')['name'].astype(str).str[:2].to_dict()
         
-        tasks['objectid_int'] = pd.to_numeric(tasks['objectid'], errors='coerce')
-        tasks['task_id'] = tasks['objectid_int'].map(task_prefix_map).fillna("LT")
+        tasks['objectid_clean'] = pd.to_numeric(tasks['objectid'], errors='coerce').astype('Int64').astype(str)
+        tasks['task_id'] = tasks['objectid_clean'].map(task_prefix_map).fillna("LT")
         
-        # 5. Schema formatting
+        # Schema formatting
         tasks['student_id'] = tasks['userid'].astype(int).astype(str)
-        tasks['start_time'] = tasks['timecreated'].dt.strftime('%Y-%m-%d %H:%M:%S')
-        tasks['end_time']   = tasks['end_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        tasks['start_time'] = tasks['timecreated'].dt.strftime('%Y-%m-%dT%H:%M:%S')
+        tasks['end_time']   = tasks['end_time'].dt.strftime('%Y-%m-%dT%H:%M:%S')
         
         tasks['tackled_id'] = "tackled_" + tasks['student_id'] + "_" + tasks['task_id'] + "_" + tasks['start_time']
         tasks['time_spent'] = ((pd.to_datetime(tasks['end_time']) - pd.to_datetime(tasks['start_time'])).dt.total_seconds() / 60.0).astype(str)
@@ -175,38 +180,42 @@ class ReviewedTransformer:
     def execute(self, extracted_data):
         sessionized_logs, _ = get_sessionized_data(extracted_data)
         views = calculate_view_durations(sessionized_logs)
+        if views.empty: return pd.DataFrame()
         
         # Filter for mod_page
         pages = views[views['eventname'] == r'\mod_page\event\course_module_viewed'].copy()
         if pages.empty: return pd.DataFrame()
 
-        # Build SI Map
+        # Build SI Map securely
         pages_df = extracted_data["pages"].copy()
-        pages_df = pages_df[pages_df['name'].str.startswith("(SI)", na=False)]
+        pages_df = pages_df[pages_df['name'].str.startswith("(SI)", na=False)].copy()
         
         blueprint = extracted_data["blueprint"].copy()
         title_to_id = blueprint.set_index('supportive_title')['si_id'].to_dict()
         
         pages_df['mapped_id'] = pages_df['name'].map(title_to_id).fillna("SI_" + pages_df['id'].astype(str))
-        si_map = pages_df.set_index('id')['mapped_id'].to_dict()
+        pages_df['id_clean']  = pd.to_numeric(pages_df['id'], errors='coerce').astype('Int64').astype(str)
+        si_map = pages_df.set_index('id_clean')['mapped_id'].to_dict()
 
         # Apply mapping and filter
-        pages['objectid_int'] = pd.to_numeric(pages['objectid'], errors='coerce')
-        pages['si_id'] = pages['objectid_int'].map(si_map)
-        pages = pages[pages['si_id'].notna()].copy() # Drop pages that aren't SI
+        # FIX: Safe Int64 parsing drops the float artifact (e.g. 45.0 -> 45)
+        pages['objectid_clean'] = pd.to_numeric(pages['objectid'], errors='coerce').astype('Int64').astype(str)
+        pages['si_id'] = pages['objectid_clean'].map(si_map)
+        pages = pages[pages['si_id'].notna()].copy() 
+        if pages.empty: return pd.DataFrame()
 
         # Build Schema
         completed_dict = get_completion_timestamps(extracted_data)
         pages['student_id'] = pages['userid'].astype(int).astype(str)
-        pages['start_time'] = pages['timecreated'].dt.strftime('%Y-%m-%d %H:%M:%S')
-        pages['end_time']   = pages['end_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        pages['start_time'] = pages['timecreated'].dt.strftime('%Y-%m-%dT%H:%M:%S')
+        pages['end_time']   = pages['end_time'].dt.strftime('%Y-%m-%dT%H:%M:%S')
         pages['time_spent'] = ((pd.to_datetime(pages['end_time']) - pd.to_datetime(pages['start_time'])).dt.total_seconds() / 60.0).astype(str)
         
-        # Fetch completion times
-        pages['instance_str'] = pages['objectid_int'].astype(str)
-        pages['userid_str'] = pages['userid'].astype(int).astype(str) # ADD THIS
-        pages['completion_time'] = pages.set_index(['userid_str', 'instance_str']).index.map(completed_dict)
+        # Fetch completion times securely via multi-index mapping
+        pages['userid_str'] = pd.to_numeric(pages['userid'], errors='coerce').astype('Int64').astype(str)
+        pages['completion_time'] = pages.set_index(['userid_str', 'objectid_clean']).index.map(completed_dict)
         pages['completion_time'] = pages['completion_time'].fillna("")
+        
         pages['reviewed_id'] = "reviewed_" + pages['student_id'] + "_" + pages['si_id'] + "_" + pages['start_time']
 
         cols = ['reviewed_id', 'session_id', 'si_id', 'start_time', 'end_time', 'time_spent', 'completion_time']
@@ -228,38 +237,42 @@ class ConsultedTransformer:
     def execute(self, extracted_data):
         sessionized_logs, _ = get_sessionized_data(extracted_data)
         views = calculate_view_durations(sessionized_logs)
+        if views.empty: return pd.DataFrame()
         
         # Filter for mod_page
         pages = views[views['eventname'] == r'\mod_page\event\course_module_viewed'].copy()
         if pages.empty: return pd.DataFrame()
 
-        # Build PI Map
+        # Build PI Map securely
         pages_df = extracted_data["pages"].copy()
-        pages_df = pages_df[pages_df['name'].str.startswith("(PI)", na=False)]
+        pages_df = pages_df[pages_df['name'].str.startswith("(PI)", na=False)].copy()
         
         blueprint = extracted_data["blueprint"].copy()
         title_to_id = blueprint.set_index('procedural_title')['pi_id'].to_dict()
         
         pages_df['mapped_id'] = pages_df['name'].map(title_to_id).fillna("PI_" + pages_df['id'].astype(str))
-        pi_map = pages_df.set_index('id')['mapped_id'].to_dict()
+        pages_df['id_clean']  = pd.to_numeric(pages_df['id'], errors='coerce').astype('Int64').astype(str)
+        pi_map = pages_df.set_index('id_clean')['mapped_id'].to_dict()
         
         # Apply mapping and filter
-        pages['objectid_int'] = pd.to_numeric(pages['objectid'], errors='coerce')
-        pages['pi_id'] = pages['objectid_int'].map(pi_map)
-        pages = pages[pages['pi_id'].notna()].copy() # Drop pages that aren't PI
+        # FIX: Safe Int64 parsing drops the float artifact (e.g. 45.0 -> 45)
+        pages['objectid_clean'] = pd.to_numeric(pages['objectid'], errors='coerce').astype('Int64').astype(str)
+        pages['pi_id'] = pages['objectid_clean'].map(pi_map)
+        pages = pages[pages['pi_id'].notna()].copy() 
+        if pages.empty: return pd.DataFrame()
 
         # Build Schema
         completed_dict = get_completion_timestamps(extracted_data)
         pages['student_id'] = pages['userid'].astype(int).astype(str)
-        pages['start_time'] = pages['timecreated'].dt.strftime('%Y-%m-%d %H:%M:%S')
-        pages['end_time']   = pages['end_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        pages['start_time'] = pages['timecreated'].dt.strftime('%Y-%m-%dT%H:%M:%S')
+        pages['end_time']   = pages['end_time'].dt.strftime('%Y-%m-%dT%H:%M:%S')
         pages['time_spent'] = ((pd.to_datetime(pages['end_time']) - pd.to_datetime(pages['start_time'])).dt.total_seconds() / 60.0).astype(str)
         
-        # Fetch completion times
-        pages['instance_str'] = pages['objectid_int'].astype(str)
-        pages['userid_str'] = pages['userid'].astype(int).astype(str) # ADD THIS
-        pages['completion_time'] = pages.set_index(['userid_str', 'instance_str']).index.map(completed_dict)
+        # Fetch completion times securely via multi-index mapping
+        pages['userid_str'] = pd.to_numeric(pages['userid'], errors='coerce').astype('Int64').astype(str)
+        pages['completion_time'] = pages.set_index(['userid_str', 'objectid_clean']).index.map(completed_dict)
         pages['completion_time'] = pages['completion_time'].fillna("")
+        
         pages['consulted_id'] = "consulted_" + pages['student_id'] + "_" + pages['pi_id'] + "_" + pages['start_time']
 
         cols = ['consulted_id', 'session_id', 'pi_id', 'start_time', 'end_time', 'time_spent', 'completion_time']

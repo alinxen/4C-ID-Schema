@@ -253,7 +253,7 @@ class LearningSessionTransformer(NodeTransformer):
     def _append_session(self, sessions_list: list, user_id: int, start_time: pd.Timestamp, end_time: pd.Timestamp):
         """Collects raw session data into a list of dictionaries."""
         sessions_list.append({
-            "session_id": f"session_{user_id}_{start_time}",
+            "session_id": f"session_{user_id}_{start_time.strftime('%Y-%m-%dT%H:%M:%S')}",
             "student_id": str(user_id),
             "start_time": start_time.isoformat(), 
             "end_time":   end_time.isoformat(),
