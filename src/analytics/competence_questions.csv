@@ -8,7 +8,7 @@ Question_ID;Question
 1.07;Are there tasks where a large proportion of the students make the same mistakes?
 1.08;Do students perform worse on certain question types than on others?
 1.09;Is the success rate for a task higher if the corresponding Supportive Information was read beforehand?
-1.10;
+1.10;Which competences / skills / knowledge elements were successfully taught?
 1.11;Is supportive information connected to a learning task reviewed in temporal proximity to the task?
 1.12;What do students do after a failed attempt?
 1.13;What is the average total score?
@@ -25,19 +25,17 @@ Question_ID;Question
 1.24;Which skills are taught or required for the solution in the learning unit, and at which level of cognitive processes?
 1.25;Which knowledge elements are taught or required for the solution in the learning unit, and in which knowledge dimension?
 1.26;Which competences / skills / knowledge elements had the most failed attempts?
-1.27;Which competences / skills / knowledge elements were successfully taught?
 2.01;How much time did the student spend in the course?
 2.02;When, how often, and for how long did the student learn?
-2.03;With which content did the student spend the most time?
-2.04;Which tasks did the student work on?
-2.05;For which tasks did the student submit a solution attempt?
-2.06;With which tasks did the student have difficulties (less than 80 percent of the points in the first attempt)?
-2.07;Which tasks did the student find easy?
+2.03;With which content did the student spend the most time on?
+2.04;Which tasks did the student attempt to solve?
+2.05;For which tasks did the student submit a written answer?
+2.06;With tasks did the student solve on the first attempt?
+2.07;Which competences / skills / knowledge elements does a student possess?
 2.08;How long did the student spend on a task?
-2.09;Which tasks did the student work on multiple times?
-2.10;What percentage of the tasks did the student work on multiple times?
-2.11;How did the student’s score develop over multiple attempts
-for a task to achieve a specific competence?
+2.09;Which tasks did the student attempt to solve multiple times?
+2.10;What percentage of the tasks did the student attempt to solve multiple times?
+2.11;How did the student’s score develop over multiple attempts?
 2.12;What did the student work on between multiple solution attempts for a task?
 2.13;Were there tasks where the student marked a task as completed but did not submit a solution attempt?
 2.14;Which Supportive Information did the student work on?
@@ -46,9 +44,6 @@ for a task to achieve a specific competence?
 2.17;Did the student look at Procedural Information related to the task?
 2.18;Did the student look at the Supportive Information related to a task before working on the task?
 2.19;What percentage of the course did the student complete?
-2.20;What percentage of the total score did the student achieve?
-2.21;What percentage of the achievable points in the tasks they worked on did the student achieve?
-2.22;Which competences / skills / knowledge elements does a student possess?
 3.01;By what percentage of the students was a task / Procedural Information page / Supportive Information page accessed?
 3.02;By what percentage of the students was a task / Procedural Information page / Supportive Information page completed?
 3.03;By what percentage of the students was a solution attempt submitted for a task?
@@ -58,15 +53,13 @@ for a task to achieve a specific competence?
 3.07;How many points on average were scored on a task?
 3.08;When in the temporal progression of the course was a task / Procedural Information page / Supportive Information page accessed?
 3.09;Are there students who marked a task as completed but did not submit a solution attempt for it?
-3.10;What incorrect answers were submitted for a task?
-3.11;Which students had difficulties solving a task?
-4.01;In which tasks is a competence / a skill / a knowledge element trained?
+3.10;What incorrect answers were submitted for a specific task?
+3.11;Which students had difficulties solving a specific task?
+4.01;Which competence / skill / knowledge element does each task train?
 4.02;What percentage of the students practiced a competence / a skill / a knowledge element during the course?
 4.03;How much time in total was spent on tasks that train a competence / a skill / a knowledge element?
 4.04;How successful were the students in tasks that train a competence / a skill / a knowledge element?
 4.05;Were better results achieved in later tasks requiring a competence / a skill / a knowledge element than in earlier tasks?
 4.06;Which students had difficulties with a competence / a skill / a knowledge element?
 4.07;Which cognitive processes are required in which tasks regarding a skill?
-4.08;Are worse results achieved on tasks requiring a higher level of cognitive processes regarding a skill than on tasks requiring lower levels regarding the same skill?
 4.09;In which knowledge dimension is a knowledge element required in which tasks?
-4.10;Are worse results achieved on tasks requiring a higher knowledge dimension regarding a knowledge element than on tasks requiring a lower knowledge dimension regarding the same knowledge element?

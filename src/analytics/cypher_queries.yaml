@@ -66,13 +66,20 @@ queries:
       WHERE ls1.start_time < a.timestamp
       RETURN t.task_id, avg(toInteger(a.passed)) AS success_rate_with_prep
 
-  #- id: "1.10"
-  #  note: "Lost in transit"
-  #  query: |
-  #    asdf
+  - id: "1.10"
+    query: |
+      MATCH ()-[a:ATTEMPTED {passed: true}]->(t:Learning_Task)
+      OPTIONAL MATCH (t)-[:DEVELOPS]->(c:Competence)
+      OPTIONAL MATCH (t)-[:PRACTICES]->(s:Skill)
+      OPTIONAL MATCH (t)-[:APPLIES]->(k:Knowledge)
+      RETURN c.competence_title AS Competence,
+             s.skill_title AS Skill,
+             k.knowledge_title AS Knowledge,
+             count(a) AS successful_attempts
+      ORDER BY successful_attempts DESC
 
   - id: "1.11"
-    note: "Can also be applied to Procedural Information"
+    note: "Can also be applied to Procedural Information. Time is in seconds."
     query: |
       MATCH (ls:Learning_Session)-[tac:TACKLED]->(t:Learning_Task)-[:REFERENCES]->(si:Supportive_Information)
       MATCH (ls)-[rev:REVIEWED]->(si)
@@ -101,7 +108,7 @@ queries:
       ORDER BY average_score DESC
 
   - id: "1.15"
-    note: "Measured in seconds"
+    note: "Measured in minutes"
     query: |
       MATCH (s:Student)-[r:STUDIED]->(ls:Learning_Session)
       RETURN s.student_id, s.username, sum(toInteger(r.duration)) AS total_time_spent
@@ -136,9 +143,10 @@ queries:
   - id: "1.19"
     query: |
       MATCH ()-[r:STUDIED]->(:Learning_Session)
-      RETURN avg(toInteger(r.duration)) AS average_session_duration_seconds
+      RETURN avg(toInteger(r.duration)) AS average_session_duration_minutes
 
   - id: "1.20"
+    note: "Time measured in minutes"
     query: |
       MATCH ()-[t:TACKLED]->(lt:Learning_Task)
       RETURN lt.task_title AS content_title, "Task" AS content_type, sum(toInteger(t.time_spent)) AS total_time_spent
@@ -200,24 +208,12 @@ queries:
              count(a) AS failed_attempts
       ORDER BY failed_attempts DESC
 
-  - id: "1.27"
-    query: |
-      MATCH ()-[a:ATTEMPTED {passed: true}]->(t:Learning_Task)
-      OPTIONAL MATCH (t)-[:DEVELOPS]->(c:Competence)
-      OPTIONAL MATCH (t)-[:PRACTICES]->(s:Skill)
-      OPTIONAL MATCH (t)-[:APPLIES]->(k:Knowledge)
-      RETURN c.competence_title AS Competence,
-             s.skill_title AS Skill,
-             k.knowledge_title AS Knowledge,
-             count(a) AS successful_attempts
-      ORDER BY successful_attempts DESC
-
   - id: "2.01"
     parameters:
       student_id: "3"
     query: |
       MATCH (s:Student {student_id: $student_id})-[r:STUDIED]->(ls:Learning_Session)
-      RETURN s.student_id, sum(toInteger(r.duration)) AS total_time_spent_seconds
+      RETURN s.student_id, sum(toInteger(r.duration)) AS total_time_spent_minutes
 
   - id: "2.02"
     parameters:
@@ -226,14 +222,14 @@ queries:
       MATCH (s:Student {student_id: $student_id})-[r:STUDIED]->(ls:Learning_Session)
       RETURN ls.start_time AS session_start,
              ls.end_time AS session_end,
-             toInteger(r.duration) AS session_duration_seconds
+             toInteger(r.duration) AS session_duration_minutes
       ORDER BY session_start ASC
 
   - id: "2.03"
     parameters:
       student_id: "3"
     query: |
-      CALL {
+      CALL () {
         MATCH (s:Student {student_id: $student_id})-[:STUDIED]->(:Learning_Session)-[t:TACKLED]->(lt:Learning_Task)
         RETURN lt.task_title AS content_title, "Task" AS type, sum(toInteger(t.time_spent)) AS time_spent
         UNION ALL
@@ -244,7 +240,7 @@ queries:
         RETURN pi.pi_title AS content_title, "Procedural Info" AS type, sum(toInteger(c.time_spent)) AS time_spent
       }
       RETURN content_title, type, sum(time_spent) AS total_time_spent
-      ORDER BY total_time_spent DESC
+      ORDER BY total_time_spent DESC            
 
   - id: "2.04"
     parameters:
@@ -268,22 +264,29 @@ queries:
       MATCH (s:Student {student_id: $student_id})-[a:ATTEMPTED]->(t:Learning_Task)
       WITH t, a ORDER BY a.timestamp ASC
       WITH t, collect(a)[0] AS first_attempt
-      WHERE first_attempt.score < 80
-      RETURN t.task_id, t.task_title, first_attempt.score AS first_attempt_score
+      RETURN t.task_id AS task_id, 
+             t.task_title AS task_title, 
+             first_attempt.passed AS passed_first_try,
+             first_attempt.score AS first_attempt_score,
+             first_attempt.timestamp AS attempt_time
 
   - id: "2.07"
     parameters:
       student_id: "3"
+    note: 
     query: |
-      MATCH (s:Student {student_id: $student_id})-[a:ATTEMPTED]->(t:Learning_Task)
-      WITH t, a ORDER BY a.timestamp ASC
-      WITH t, collect(a)[0] AS first_attempt
-      WHERE first_attempt.score >= 80 AND first_attempt.passed = true
-      RETURN t.task_id, t.task_title, first_attempt.score AS first_attempt_score
+      MATCH (s:Student {student_id: $student_id})-[a:ATTEMPTED {passed: true}]->(t:Learning_Task)
+      OPTIONAL MATCH (t)-[:DEVELOPS]->(c:Competence)
+      OPTIONAL MATCH (t)-[:PRACTICES]->(sk:Skill)
+      OPTIONAL MATCH (t)-[:APPLIES]->(k:Knowledge)
+      RETURN DISTINCT c.competence_title AS Competence,
+                      sk.skill_title AS Skill,
+                      k.knowledge_title AS Knowledge
 
   - id: "2.08"
     parameters:
       student_id: "3"
+    note: Time measured in minutes.
     query: |
       MATCH (s:Student {student_id: $student_id})-[:STUDIED]->(:Learning_Session)-[t:TACKLED]->(lt:Learning_Task)
       RETURN lt.task_id, lt.task_title, sum(toInteger(t.time_spent)) AS total_time_spent_on_task
@@ -313,14 +316,15 @@ queries:
     parameters:
       student_id: "3"
     query: |
-      MATCH (s:Student)-[att:ATTEMPTED]->(lt:Learning_Task)-[:DEVELOPS]->(c:Competence)
-      MATCH (s)-[:FINISHED]->(lt)
-      WITH s, lt, c, count(att) AS attempt_count, collect(att.score) AS scores
-      WHERE attempt_count > 1
-      RETURN s.username AS student,
-             c.competence_title AS competence,
-             attempt_count,
-             scores
+      MATCH (s:Student {student_id: $student_id})-[a:ATTEMPTED]->(t:Learning_Task)
+      RETURN t.task_id AS task_id,
+             t.task_title AS task_title,
+             a.timestamp AS timestamp,
+             a.score AS score,
+             a.passed AS passed
+      ORDER BY task_id, a.timestamp ASC
+      
+      
   - id: "2.12"
     parameters:
       student_id: "3"
@@ -331,13 +335,16 @@ queries:
       WHERE size(attempts) > 1
       UNWIND range(0, size(attempts)-2) AS i
       WITH t, s, attempts[i] AS a1, attempts[i+1] AS a2
-      MATCH (s)-[:STUDIED]->(:Learning_Session)-[action]->(target)
+      OPTIONAL MATCH (s)-[:STUDIED]->(:Learning_Session)-[action]->(target)
       WHERE action.start_time > a1.timestamp AND action.start_time < a2.timestamp
       RETURN t.task_id AS Task,
              a1.timestamp AS First_Attempt,
              a2.timestamp AS Next_Attempt,
+             action.start_time AS Action_Time,
              type(action) AS Intervening_Action,
-             labels(target)[0] AS Intervening_Target
+             labels(target)[0] AS Target_Type,
+             coalesce(target.task_title, target.si_title, target.pi_title, "No Intervening Actions") AS Target_Title 
+      ORDER BY Task, First_Attempt, Action_Time ASC
 
   - id: "2.13"
     parameters:
@@ -364,8 +371,9 @@ queries:
   - id: "2.16"
     parameters:
       student_id: "3"
+    note: "List does not include solution attempts."
     query: |
-      CALL {
+      CALL () {
         MATCH (s:Student {student_id: $student_id})-[:STUDIED]->(:Learning_Session)-[t:TACKLED]->(lt:Learning_Task)
         RETURN lt.task_title AS content, "Task" AS type, t.start_time AS timestamp
         UNION ALL
@@ -405,33 +413,217 @@ queries:
       WITH total_tasks, count(DISTINCT t) AS finished_tasks
       RETURN (toFloat(finished_tasks) / total_tasks) * 100 AS course_completion_percentage
 
-  - id: "2.20"
-    parameters:
-      student_id: "3"
+  - id: "3.01"
     query: |
-      MATCH (all_t:Learning_Task)
-      WITH count(all_t) * 100 AS max_course_score
-      MATCH (s:Student {student_id: $student_id})-[a:ATTEMPTED]->(t:Learning_Task)
-      WITH max_course_score, t, max(a.score) AS best_score
-      RETURN (toFloat(sum(best_score)) / max_course_score) * 100 AS percentage_total_score
+      MATCH (s:Student) WITH count(DISTINCT s) as total_students
+      CALL (total_students) {
+          MATCH (st:Student)-[:STUDIED]->(:Learning_Session)-[:TACKLED]->(lt:Learning_Task)
+          WITH total_students, lt.task_id AS id, lt.task_title AS title, "Task" AS type, count(DISTINCT st) AS student_count
+          RETURN id, title, type, (toFloat(student_count)/total_students)*100 AS access_percentage
+          UNION ALL
+          MATCH (st:Student)-[:STUDIED]->(:Learning_Session)-[:REVIEWED]->(si:Supportive_Information)
+          WITH total_students, si.si_id AS id, si.si_title AS title, "Supportive Info" AS type, count(DISTINCT st) AS student_count
+          RETURN id, title, type, (toFloat(student_count)/total_students)*100 AS access_percentage
+          UNION ALL
+          MATCH (st:Student)-[:STUDIED]->(:Learning_Session)-[:CONSULTED]->(pi:Procedural_Information)
+          WITH total_students, pi.pi_id AS id, pi.pi_title AS title, "Procedural Info" AS type, count(DISTINCT st) AS student_count
+          RETURN id, title, type, (toFloat(student_count)/total_students)*100 AS access_percentage
+      }
+      RETURN id, title, type, access_percentage ORDER BY type, access_percentage DESC
 
-  - id: "2.21"
-    parameters:
-      student_id: "3"
+  - id: "3.02"
+    note: "Relies on the FINISHED edge for tasks and completion_time property for info pages"
     query: |
-      MATCH (s:Student {student_id: $student_id})-[a:ATTEMPTED]->(t:Learning_Task)
-      WITH t, max(a.score) AS best_score
-      WITH sum(best_score) AS achieved_points, count(DISTINCT t) * 100 AS attempted_tasks_max_points
-      RETURN (toFloat(achieved_points) / attempted_tasks_max_points) * 100 AS percentage_of_attempted_points
+      MATCH (s:Student) WITH count(DISTINCT s) as total_students
+      CALL (total_students) {
+          MATCH (st:Student)-[:FINISHED]->(lt:Learning_Task)
+          WITH total_students, lt.task_id AS id, lt.task_title AS title, "Task" AS type, count(DISTINCT st) AS student_count
+          RETURN id, title, type, (toFloat(student_count)/total_students)*100 AS completion_percentage
+          UNION ALL
+          MATCH (st:Student)-[:STUDIED]->(:Learning_Session)-[r:REVIEWED]->(si:Supportive_Information) WHERE r.completion_time IS NOT NULL AND r.completion_time <> ""
+          WITH total_students, si.si_id AS id, si.si_title AS title, "Supportive Info" AS type, count(DISTINCT st) AS student_count
+          RETURN id, title, type, (toFloat(student_count)/total_students)*100 AS completion_percentage
+          UNION ALL
+          MATCH (st:Student)-[:STUDIED]->(:Learning_Session)-[c:CONSULTED]->(pi:Procedural_Information) WHERE c.completion_time IS NOT NULL AND c.completion_time <> ""
+          WITH total_students, pi.pi_id AS id, pi.pi_title AS title, "Procedural Info" AS type, count(DISTINCT st) AS student_count
+          RETURN id, title, type, (toFloat(student_count)/total_students)*100 AS completion_percentage
+      }
+      RETURN id, title, type, completion_percentage ORDER BY type, completion_percentage DESC
 
-  - id: "2.22"
-    parameters:
-      student_id: "3"
+  - id: "3.03"
     query: |
-      MATCH (s:Student {student_id: $student_id})-[a:ATTEMPTED {passed: true}]->(t:Learning_Task)
-      OPTIONAL MATCH (t)-[:DEVELOPS]->(c:Competence)
-      OPTIONAL MATCH (t)-[:PRACTICES]->(sk:Skill)
-      OPTIONAL MATCH (t)-[:APPLIES]->(k:Knowledge)
-      RETURN DISTINCT c.competence_title AS Competence,
-                      sk.skill_title AS Skill,
-                      k.knowledge_title AS Knowledge
+      MATCH (s:Student) WITH count(DISTINCT s) as total_students
+      MATCH (lt:Learning_Task)
+      OPTIONAL MATCH (st:Student)-[:ATTEMPTED]->(lt)
+      WITH total_students, lt, count(DISTINCT st) AS attempting_students
+      RETURN lt.task_id, lt.task_title, (toFloat(attempting_students) / total_students) * 100 AS attempt_percentage ORDER BY attempt_percentage DESC
+
+  - id: "3.04"
+    note: "Averages the time_spent property from TACKLED, REVIEWED, and CONSULTED edges."
+    query: |
+      CALL () {
+          MATCH ()-[t:TACKLED]->(lt:Learning_Task)
+          RETURN lt.task_id AS id, lt.task_title AS title, "Task" AS type, avg(toInteger(t.time_spent)) AS avg_time_spent
+          UNION ALL
+          MATCH ()-[r:REVIEWED]->(si:Supportive_Information)
+          RETURN si.si_id AS id, si.si_title AS title, "Supportive Info" AS type, avg(toInteger(r.time_spent)) AS avg_time_spent
+          UNION ALL
+          MATCH ()-[c:CONSULTED]->(pi:Procedural_Information)
+          RETURN pi.pi_id AS id, pi.pi_title AS title, "Procedural Info" AS type, avg(toInteger(c.time_spent)) AS avg_time_spent
+      }
+      RETURN id, title, type, avg_time_spent ORDER BY type, avg_time_spent DESC
+
+  - id: "3.05"
+    query: |
+      CALL () {
+          MATCH ()-[t:TACKLED]->(lt:Learning_Task)
+          RETURN lt.task_id AS id, lt.task_title AS title, "Task" AS type, sum(toInteger(t.time_spent)) AS total_time_spent
+          UNION ALL
+          MATCH ()-[r:REVIEWED]->(si:Supportive_Information)
+          RETURN si.si_id AS id, si.si_title AS title, "Supportive Info" AS type, sum(toInteger(r.time_spent)) AS total_time_spent
+          UNION ALL
+          MATCH ()-[c:CONSULTED]->(pi:Procedural_Information)
+          RETURN pi.pi_id AS id, pi.pi_title AS title, "Procedural Info" AS type, sum(toInteger(c.time_spent)) AS total_time_spent
+      }
+      RETURN id, title, type, total_time_spent 
+      ORDER BY type, total_time_spent DESC
+
+  - id: "3.06"
+    query: |
+      MATCH (s:Student)-[a:ATTEMPTED]->(lt:Learning_Task)
+      RETURN lt.task_id, lt.task_title, toFloat(count(a)) / count(DISTINCT s) AS avg_attempts_per_student
+      ORDER BY avg_attempts_per_student DESC
+
+  - id: "3.07"
+    note: "Averages the score property on the ATTEMPTED edge."
+    query: |
+      MATCH ()-[a:ATTEMPTED]->(lt:Learning_Task)
+      RETURN lt.task_id, lt.task_title, avg(a.score) AS average_score ORDER BY average_score DESC
+
+  - id: "3.08"
+    query: |
+      CALL () {
+          MATCH (:Learning_Session)-[t:TACKLED]->(lt:Learning_Task)
+          RETURN lt.task_id AS id, "Task" AS type, substring(t.start_time, 0, 10) AS access_date, count(*) AS access_count
+          UNION ALL
+          MATCH (:Learning_Session)-[r:REVIEWED]->(si:Supportive_Information)
+          RETURN si.si_id AS id, "Supportive Info" AS type, substring(r.start_time, 0, 10) AS access_date, count(*) AS access_count
+          UNION ALL
+          MATCH (:Learning_Session)-[c:CONSULTED]->(pi:Procedural_Information)
+          RETURN pi.pi_id AS id, "Procedural Info" AS type, substring(c.start_time, 0, 10) AS access_date, count(*) AS access_count
+      }
+      RETURN id, type, access_date, access_count 
+      ORDER BY access_date ASC, id ASC
+
+  - id: "3.09"
+    query: |
+      MATCH (s:Student)-[:FINISHED]->(lt:Learning_Task)
+      WHERE NOT (s)-[:ATTEMPTED]->(lt)
+      RETURN s.student_id, s.username, lt.task_id, lt.task_title
+
+  - id: "3.10"
+    parameters:
+      task_id: "A1"
+    query: |
+      MATCH ()-[a:ATTEMPTED {passed: false}]->(lt:Learning_Task {task_id: $task_id})
+      RETURN a.student_response AS incorrect_response, count(*) AS frequency
+      ORDER BY frequency DESC
+
+  - id: "3.11"
+    parameters:
+      task_id: "A1"
+    note: "Defines difficulty as having more than 1 failed attempt."
+    query: |
+      MATCH (s:Student)-[a:ATTEMPTED {passed: false}]->(lt:Learning_Task {task_id: $task_id})
+      WITH s, count(a) AS failed_attempts
+      WHERE failed_attempts > 1
+      RETURN s.student_id, s.username, failed_attempts
+      ORDER BY failed_attempts DESC
+      
+  - id: "4.01"
+    query: |
+      MATCH (lt:Learning_Task)
+      OPTIONAL MATCH (lt)-[:DEVELOPS]->(c:Competence)
+      OPTIONAL MATCH (lt)-[:PRACTICES]->(sk:Skill)
+      OPTIONAL MATCH (lt)-[:APPLIES]->(k:Knowledge)
+      RETURN lt.task_id, lt.task_title, collect(DISTINCT c.competence_title) AS Competences, collect(DISTINCT sk.skill_title) AS Skills, collect(DISTINCT k.knowledge_title) AS Knowledge_Elements
+
+  - id: "4.02"
+    note: "Checks percentage of students who submitted an attempt on tasks associated with the specific educational dimensions."
+    query: |
+      MATCH (s:Student) WITH count(DISTINCT s) AS total_students
+      CALL (total_students) {
+          MATCH (st:Student)-[:ATTEMPTED]->(:Learning_Task)-[:DEVELOPS]->(c:Competence)
+          WITH total_students, c.competence_id AS id, c.competence_title AS title, "Competence" AS type, count(DISTINCT st) AS student_count
+          RETURN id, title, type, (toFloat(student_count) / total_students) * 100 AS percentage
+          UNION ALL
+          MATCH (st:Student)-[:ATTEMPTED]->(:Learning_Task)-[:PRACTICES]->(sk:Skill)
+          WITH total_students, sk.skill_id AS id, sk.skill_title AS title, "Skill" AS type, count(DISTINCT st) AS student_count
+          RETURN id, title, type, (toFloat(student_count) / total_students) * 100 AS percentage
+          UNION ALL
+          MATCH (st:Student)-[:ATTEMPTED]->(:Learning_Task)-[:APPLIES]->(k:Knowledge)
+          WITH total_students, k.knowledge_id AS id, k.knowledge_title AS title, "Knowledge" AS type, count(DISTINCT st) AS student_count
+          RETURN id, title, type, (toFloat(student_count) / total_students) * 100 AS percentage
+      }
+      RETURN id, title, type, percentage 
+      ORDER BY type, percentage DESC
+
+  - id: "4.03"
+    query: |
+      CALL () {
+          MATCH (:Learning_Session)-[t:TACKLED]->(lt:Learning_Task)-[:DEVELOPS]->(c:Competence)
+          RETURN c.competence_id AS id, c.competence_title AS title, "Competence" AS type, sum(toInteger(t.time_spent)) AS total_time
+          UNION ALL
+          MATCH (:Learning_Session)-[t:TACKLED]->(lt:Learning_Task)-[:PRACTICES]->(sk:Skill)
+          RETURN sk.skill_id AS id, sk.skill_title AS title, "Skill" AS type, sum(toInteger(t.time_spent)) AS total_time
+          UNION ALL
+          MATCH (:Learning_Session)-[t:TACKLED]->(lt:Learning_Task)-[:APPLIES]->(k:Knowledge)
+          RETURN k.knowledge_id AS id, k.knowledge_title AS title, "Knowledge" AS type, sum(toInteger(t.time_spent)) AS total_time
+      }
+      RETURN id, title, type, total_time 
+      ORDER BY type, total_time DESC
+
+  - id: "4.04"
+    query: |
+      CALL () {
+          MATCH ()-[a:ATTEMPTED]->(lt:Learning_Task)-[:DEVELOPS]->(c:Competence)
+          RETURN c.competence_id AS id, c.competence_title AS title, "Competence" AS type, avg(a.score) AS average_score, avg(toInteger(a.passed)) * 100 AS pass_rate_percentage
+          UNION ALL
+          MATCH ()-[a:ATTEMPTED]->(lt:Learning_Task)-[:PRACTICES]->(sk:Skill)
+          RETURN sk.skill_id AS id, sk.skill_title AS title, "Skill" AS type, avg(a.score) AS average_score, avg(toInteger(a.passed)) * 100 AS pass_rate_percentage
+          UNION ALL
+          MATCH ()-[a:ATTEMPTED]->(lt:Learning_Task)-[:APPLIES]->(k:Knowledge)
+          RETURN k.knowledge_id AS id, k.knowledge_title AS title, "Knowledge" AS type, avg(a.score) AS average_score, avg(toInteger(a.passed)) * 100 AS pass_rate_percentage
+      }
+      RETURN id, title, type, average_score, pass_rate_percentage 
+      ORDER BY type, pass_rate_percentage DESC
+
+  - id: "4.05"
+    parameters:
+      skill_id: "SDSENG09"
+    query: |
+      MATCH ()-[a:ATTEMPTED]->(lt:Learning_Task)-[:PRACTICES]->(sk:Skill {skill_id: $skill_id})
+      RETURN substring(a.timestamp, 0, 10) AS date, avg(a.score) AS average_score, avg(toInteger(a.passed))*100 AS pass_rate
+      ORDER BY date ASC
+
+  - id: "4.06"
+    parameters:
+      skill_id: "SDSM04"
+    query: |
+      MATCH (s:Student)-[a:ATTEMPTED {passed: false}]->(lt:Learning_Task)-[:PRACTICES]->(sk:Skill {skill_id: $skill_id})
+      WITH s, count(a) AS failed_attempts
+      WHERE failed_attempts > 1
+      RETURN s.student_id, s.username, failed_attempts ORDER BY failed_attempts DESC
+
+  - id: "4.07"
+    query: |
+      MATCH (lt:Learning_Task)-[p:PRACTICES]->(sk:Skill)
+      RETURN sk.skill_id, sk.skill_title, lt.task_id, lt.task_title, p.cognitive_dimension
+      ORDER BY sk.skill_id
+      
+  - id: "4.09"
+    query: |
+      MATCH (lt:Learning_Task)-[ap:APPLIES]->(k:Knowledge)
+      RETURN k.knowledge_id, k.knowledge_title, lt.task_id, lt.task_title, ap.knowledge_dimension
+      ORDER BY k.knowledge_id
+
