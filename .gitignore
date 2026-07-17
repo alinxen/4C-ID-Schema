@@ -1,5 +1,6 @@
 # Ignore Docker data volumes
 docker_data/
+data/
 
 # Ignore any other environment files or logs
 .env
