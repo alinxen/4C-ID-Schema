@@ -6,6 +6,20 @@ from typing import ClassVar
 # NODES of the 4C/ID-SCHEMA
 # -------------------------------------------------
 
+class COMPETENCE(BaseModel):
+    label                   : ClassVar[str] = "Competence"
+    competence_id           : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    competence_title        : str 
+    competence_description  : str
+    competence_group_id     : str 
+    competence_group        : str    
+
+
+
+
+
+
+
 class SKILL(BaseModel):
     label                   : ClassVar[str] = "Skill"
     skill_id                : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
@@ -20,12 +34,7 @@ class KNOWLEDGE(BaseModel):
     knowledge_group_id      : str 
     knowledge_group_title   : str
     
-class COMPETENCE(BaseModel):
-    label                   : ClassVar[str] = "Competence"
-    competence_id           : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
-    competence_title        : str 
-    competence_group_id     : str 
-    competence_group        : str    
+
 
 class TASK_CLASS(BaseModel):
     label                   : ClassVar[str] = "Task_Class"

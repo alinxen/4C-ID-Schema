@@ -34,6 +34,20 @@ class NodeTransformer:
 #                  Node Transformers
 # ---------------------------------------------------------
 
+class CompetenceTransformer(NodeTransformer):
+    """Transforms and maps competence definitions."""
+    DATA = {
+        "competence": (COMPETENCE_CSV_PATH,['competence_id', 'competence_title', 'competence_description', 'competence_group_id','competence_group'])
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
 class SkillTransformer(NodeTransformer):
     """Transforms and maps skill definitions."""
@@ -49,11 +63,7 @@ class KnowledgeTransformer(NodeTransformer):
     }
 
 
-class CompetenceTransformer(NodeTransformer):
-    """Transforms and maps competence definitions."""
-    DATA = {
-        "competence": (COMPETENCE_CSV_PATH, ['competence_id', 'competence_title', 'competence_group_id', 'competence_group'])
-    }
+
 
 
 class TaskClassTransformer(NodeTransformer):
