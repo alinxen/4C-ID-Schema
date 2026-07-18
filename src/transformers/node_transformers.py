@@ -4,7 +4,9 @@ from typing import Dict, Any
 import pandas as pd
 
 from src.config import ( 
-    COMPETENCE_CSV_PATH, 
+    COMPETENCE_CSV_PATH,
+    SKILLS_CSV_PATH,
+    KOWLEDGE_CSV_PATH,
     COURSE_CSV_PATH,
     HVP_CSV_PATH,
     LOGFILE_CSV_PATH,
@@ -39,30 +41,23 @@ class CompetenceTransformer(NodeTransformer):
     DATA = {
         "competence": (COMPETENCE_CSV_PATH,['competence_id', 'competence_title', 'competence_description', 'competence_group_id','competence_group'])
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
+     
 class SkillTransformer(NodeTransformer):
     """Transforms and maps skill definitions."""
     DATA = {
-        "skills": (COMPETENCE_CSV_PATH, ['skill_id', 'skill_title', 'skill_group_id', 'skill_group_title'])
+        "skills": (SKILLS_CSV_PATH, ['skill_id', 'skill_title', 'skill_description', 'skill_priority', 'skill_group_id', 'skill_group_title'])
     }
-
 
 class KnowledgeTransformer(NodeTransformer):
     """Transforms and maps knowledge definitions."""
     DATA = {
-        "knowledge": (COMPETENCE_CSV_PATH, ['knowledge_id', 'knowledge_title', 'knowledge_group_id', 'knowledge_group_title'])
+        "knowledge": (KOWLEDGE_CSV_PATH, ['knowledge_id', 'knowledge_title', 'knowledge_description','knowledge_priority', 'knowledge_group_id', 'knowledge_group_title'])
     }
 
 
+
+
+#############################################################################
 
 
 

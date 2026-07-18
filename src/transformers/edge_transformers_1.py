@@ -2,6 +2,7 @@ from typing import Dict, Any
 import pandas as pd
 
 from src.config import ( 
+    FRAMEWORK_CSV_PATH,
     COURSE_CSV_PATH,
     COMPETENCE_CSV_PATH,
     TASK_CSV_PATH
@@ -26,6 +27,30 @@ class EdgeTransformer:
 # ---------------------------------------------------------
 #                Edge/Node Transformers
 # ---------------------------------------------------------
+
+class RequiresSTransformer():
+    DATA = {
+        "skill": (FRAMEWORK_CSV_PATH, ['skill_id', 'competence_id'])
+    }
+    
+    def execute(self, extracted_data):
+        df = extracted_data["skill"].copy()
+        df['requires_s_id'] = [f"req_s_{i}" for i in range(1, len(df) + 1)]
+        return df
+    
+    
+class RequiresKTransformer():
+    DATA = {
+        "knowledge": (COMPETENCE_CSV_PATH, ['knowledge_id', 'competence_id'])
+    }
+    
+    def execute(self, extracted_data):
+        df = extracted_data["knowledge"].copy()
+        df['requires_k_id'] = [f"req_k_{i}" for i in range(1, len(df) + 1)]
+        return df
+
+
+
 
 class GroupsTransformer(EdgeTransformer):
     DATA = {
@@ -108,26 +133,7 @@ class TrainsTransformer(EdgeTransformer):
         return df
     
     
-class RequiresSTransformer():
-    DATA = {
-        "skill": (COMPETENCE_CSV_PATH, ['skill_id', 'competence_id'])
-    }
-    
-    def execute(self, extracted_data):
-        df = extracted_data["skill"].copy()
-        df['requires_s_id'] = [f"req_s_{i}" for i in range(1, len(df) + 1)]
-        return df
-    
-    
-class RequiresKTransformer():
-    DATA = {
-        "knowledge": (COMPETENCE_CSV_PATH, ['knowledge_id', 'competence_id'])
-    }
-    
-    def execute(self, extracted_data):
-        df = extracted_data["knowledge"].copy()
-        df['requires_k_id'] = [f"req_k_{i}" for i in range(1, len(df) + 1)]
-        return df
+
     
 
 class DevelopsTransformer():

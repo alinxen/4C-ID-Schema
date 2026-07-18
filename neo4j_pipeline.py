@@ -15,12 +15,12 @@ import src.transformers as tf
 
 NODE_PIPELINE = [
      ("COMPETENCE",             tf.CompetenceTransformer),
-    # ("KNOWLEDGE",              tf.KnowledgeTransformer),
+     ("KNOWLEDGE",              tf.KnowledgeTransformer),
     # ("LEARNING_SESSION",       tf.LearningSessionTransformer),
     # ("LEARNING_TASK",          tf.TaskTransformer),
     # ("PART_TASK_PRACTICE",     tf.PracticeTransformer),
     # ("PROCEDURAL_INFORMATION", tf.ProceduralTransformer),
-    # ("SKILL",                  tf.SkillTransformer),
+     ("SKILL",                  tf.SkillTransformer),
     # ("STUDENT",                tf.StudentTransformer),
     # ("SUPPORTIVE_INFORMATION", tf.SupportiveTransformer),
     # ("TASK_CLASS",             tf.TaskClassTransformer)

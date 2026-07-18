@@ -14,32 +14,26 @@ class COMPETENCE(BaseModel):
     competence_group_id     : str 
     competence_group        : str    
 
-
-
-
-
-
-
 class SKILL(BaseModel):
     label                   : ClassVar[str] = "Skill"
     skill_id                : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
     skill_title             : str 
+    skill_description       : str
+    skill_priority          : int
     skill_group_id          : str 
     skill_group_title       : str
-    
+
 class KNOWLEDGE(BaseModel):
     label                   : ClassVar[str] = "Knowledge"
     knowledge_id            : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
     knowledge_title         : str 
+    knowledge_description   : str
+    knowledge_priority      : int
     knowledge_group_id      : str 
     knowledge_group_title   : str
     
-
-
-class TASK_CLASS(BaseModel):
-    label                   : ClassVar[str] = "Task_Class"
-    task_class_id           : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
-    task_class              : str     
+    
+    
     
 class LEARNING_TASK(BaseModel):
     label                   : ClassVar[str] = "Learning_Task"
@@ -47,6 +41,19 @@ class LEARNING_TASK(BaseModel):
     course_id               : int
     task_title              : str
     task_type               : str
+
+
+
+
+
+
+
+class TASK_CLASS(BaseModel):
+    label                   : ClassVar[str] = "Task_Class"
+    task_class_id           : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    task_class              : str     
+    
+
     
 class SUPPORTIVE_INFORMATION(BaseModel):
     label                   : ClassVar[str] = "Supportive_Information"
@@ -83,7 +90,30 @@ class STUDENT(BaseModel):
 # -------------------------------------------------
 # EDGES of the 4C/ID-SCHEMA
 # -------------------------------------------------    
+
+class REQUIRES_SKILL(BaseModel):
+    label                   : ClassVar[str] = "REQUIRES_S"
+    label_id                : ClassVar[str] = "requires_s_id"
+    source_label            : ClassVar[str] = "Competence"
+    source_id_field         : ClassVar[str] = "competence_id"
+    target_label            : ClassVar[str] = "Skill"
+    target_id_field         : ClassVar[str] = "skill_id"
+    requires_s_id           : str
+    competence_id           : str
+    skill_id                : str    
     
+class REQUIRES_KNOWLEDGE(BaseModel):
+    label                   : ClassVar[str] = "REQUIRES_K"
+    label_id                : ClassVar[str] = "requires_k_id"
+    source_label            : ClassVar[str] = "Competence"
+    source_id_field         : ClassVar[str] = "competence_id"
+    target_label            : ClassVar[str] = "Knowledge"
+    target_id_field         : ClassVar[str] = "knowledge_id"
+    requires_k_id           : str
+    competence_id           : str
+    knowledge_id            : str   
+
+
 class DEVELOPS_COMPETENCE(BaseModel):
     label                   : ClassVar[str] = "DEVELOPS"
     label_id                : ClassVar[str] = "develops_id"
@@ -135,27 +165,7 @@ class ATTEMPTED(BaseModel):
     task_id                 : str
     student_id              : str
     
-class REQUIRES_SKILL(BaseModel):
-    label                   : ClassVar[str] = "REQUIRES_S"
-    label_id                : ClassVar[str] = "requires_s_id"
-    source_label            : ClassVar[str] = "Competence"
-    source_id_field         : ClassVar[str] = "competence_id"
-    target_label            : ClassVar[str] = "Skill"
-    target_id_field         : ClassVar[str] = "skill_id"
-    requires_s_id           : str
-    competence_id           : str
-    skill_id                : str    
-    
-class REQUIRES_KNOWLEDGE(BaseModel):
-    label                   : ClassVar[str] = "REQUIRES_K"
-    label_id                : ClassVar[str] = "requires_k_id"
-    source_label            : ClassVar[str] = "Competence"
-    source_id_field         : ClassVar[str] = "competence_id"
-    target_label            : ClassVar[str] = "Knowledge"
-    target_id_field         : ClassVar[str] = "knowledge_id"
-    requires_k_id           : str
-    competence_id           : str
-    knowledge_id            : str    
+ 
     
 class GROUPS(BaseModel):
     label                   : ClassVar[str] = "GROUPS"
