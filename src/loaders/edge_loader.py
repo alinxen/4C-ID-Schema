@@ -9,13 +9,34 @@ def load_edges_to_neo4j(driver, edge_name, validated_data):
     except AttributeError:
         raise ValueError(f"Pipeline Error: Class '{edge_name}' not found in src.schema!")
 
-    # Extract the routing metadata
-    rel_type      = getattr(model_class, 'label', edge_name)
-    edge_id_field = getattr(model_class, 'label_id')
-    src_label     = getattr(model_class, 'source_label')
-    src_id_field  = getattr(model_class, 'source_id_field')
-    tgt_label     = getattr(model_class, 'target_label')
-    tgt_id_field  = getattr(model_class, 'target_id_field')
+    # 1. Extract the routing metadata (Updated to match new ClassVars)
+    rel_type  = getattr(model_class, 'label', edge_name)
+    src_label = getattr(model_class, 'source_label')
+    tgt_label = getattr(model_class, 'target_label')
+    
+    # 2. Dynamically find the property names using Pydantic aliases
+    src_id_field = None
+    tgt_id_field = None
+    edge_id_field = None
+
+    for field_name, field_info in model_class.model_fields.items():
+        # Updated to check validation_alias instead of alias
+        if getattr(field_info, 'validation_alias', None) == "source_id":
+            src_id_field = field_name
+        elif getattr(field_info, 'validation_alias', None) == "target_id":
+            tgt_id_field = field_name
+        elif field_name.endswith("_id"):
+            # Automatically identifies the edge's own ID 
+            # assuming it's the only other field ending in '_id'
+            edge_id_field = field_name
+
+    # Safety check to ensure the schema was configured correctly
+    if not src_id_field or not tgt_id_field:
+        raise ValueError(f"Schema Error: {edge_name} is missing 'source_id' or 'target_id' aliases.")
+    
+    if not edge_id_field:
+        raise ValueError(f"Schema Error: Could not identify the edge's primary ID field for {edge_name}.")
+        
     # Dynamically build the query
     # We MATCH both nodes by their specific IDs, then MERGE the relationship
     query = f"""

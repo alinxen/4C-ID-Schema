@@ -19,7 +19,6 @@ class SKILL(BaseModel):
     skill_id                : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
     skill_title             : str 
     skill_description       : str
-    skill_priority          : int
     skill_group_id          : str 
     skill_group_title       : str
 
@@ -28,12 +27,11 @@ class KNOWLEDGE(BaseModel):
     knowledge_id            : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
     knowledge_title         : str 
     knowledge_description   : str
-    knowledge_priority      : int
     knowledge_group_id      : str 
     knowledge_group_title   : str
     
     
-    
+##########################################################################
     
 class LEARNING_TASK(BaseModel):
     label                   : ClassVar[str] = "Learning_Task"
@@ -93,25 +91,27 @@ class STUDENT(BaseModel):
 
 class REQUIRES_SKILL(BaseModel):
     label                   : ClassVar[str] = "REQUIRES_S"
-    label_id                : ClassVar[str] = "requires_s_id"
     source_label            : ClassVar[str] = "Competence"
-    source_id_field         : ClassVar[str] = "competence_id"
     target_label            : ClassVar[str] = "Skill"
-    target_id_field         : ClassVar[str] = "skill_id"
     requires_s_id           : str
-    competence_id           : str
-    skill_id                : str    
+    skill_priority          : int
+    competence_id           : str = Field(..., validation_alias="source_id")
+    skill_id                : str = Field(..., validation_alias="target_id")
     
 class REQUIRES_KNOWLEDGE(BaseModel):
     label                   : ClassVar[str] = "REQUIRES_K"
-    label_id                : ClassVar[str] = "requires_k_id"
     source_label            : ClassVar[str] = "Competence"
-    source_id_field         : ClassVar[str] = "competence_id"
     target_label            : ClassVar[str] = "Knowledge"
-    target_id_field         : ClassVar[str] = "knowledge_id"
-    requires_k_id           : str
-    competence_id           : str
-    knowledge_id            : str   
+    requires_k_id           : str 
+    knowledge_priority      : int
+    competence_id           : str = Field(..., validation_alias="source_id")
+    knowledge_id            : str = Field(..., validation_alias="target_id")   
+    
+###############################################################################
+    
+    
+    
+
 
 
 class DEVELOPS_COMPETENCE(BaseModel):

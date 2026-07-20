@@ -3,7 +3,7 @@ import os
 DATA_DIR                = os.path.join(os.path.dirname(__file__), "..", "data")
 COMPETENCE_CSV_PATH     = os.path.join(DATA_DIR, "c_competence.csv")
 SKILLS_CSV_PATH         = os.path.join(DATA_DIR, "c_skills.csv")
-KOWLEDGE_CSV_PATH       = os.path.join(DATA_DIR, "c_knowledge.csv")
+KNOWLEDGE_CSV_PATH       = os.path.join(DATA_DIR, "c_knowledge.csv")
 FRAMEWORK_CSV_PATH      = os.path.join(DATA_DIR, "c_competence_framework.csv")
 
 

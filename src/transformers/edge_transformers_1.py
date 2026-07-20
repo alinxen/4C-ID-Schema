@@ -3,6 +3,8 @@ import pandas as pd
 
 from src.config import ( 
     FRAMEWORK_CSV_PATH,
+    SKILLS_CSV_PATH,
+    KNOWLEDGE_CSV_PATH,
     COURSE_CSV_PATH,
     COMPETENCE_CSV_PATH,
     TASK_CSV_PATH
@@ -30,24 +32,48 @@ class EdgeTransformer:
 
 class RequiresSTransformer():
     DATA = {
-        "skill": (FRAMEWORK_CSV_PATH, ['skill_id', 'competence_id'])
+        "connections": (FRAMEWORK_CSV_PATH, ['source_id', 'target_id', 'connection_type']),
+        "skills_info": (SKILLS_CSV_PATH, ['skill_id', 'skill_priority'])
     }
     
     def execute(self, extracted_data):
-        df = extracted_data["skill"].copy()
+        df_connections = extracted_data["connections"].copy()
+        df_skills = extracted_data["skills_info"].copy()
+        df = df_connections[df_connections['connection_type'] == 'competence-skill']
+        df = df.drop(columns=['connection_type'])
+        df = df.merge(
+            df_skills[['skill_id', 'skill_priority']], 
+            how='left', 
+            left_on='target_id',   # The column in your connections frame
+            right_on='skill_id'    # The column in your skills frame
+        )
+        df = df.drop(columns=['skill_id'])
+        df = df.reset_index(drop=True)
         df['requires_s_id'] = [f"req_s_{i}" for i in range(1, len(df) + 1)]
         return df
     
-    
 class RequiresKTransformer():
     DATA = {
-        "knowledge": (COMPETENCE_CSV_PATH, ['knowledge_id', 'competence_id'])
+        "connections": (FRAMEWORK_CSV_PATH, ['source_id', 'target_id', 'connection_type']),
+        "knowledge_info": (KNOWLEDGE_CSV_PATH, ['knowledge_id', 'knowledge_priority'])
     }
     
     def execute(self, extracted_data):
-        df = extracted_data["knowledge"].copy()
+        df_connections = extracted_data["connections"].copy()
+        df_knowledge = extracted_data["knowledge_info"].copy()
+        df = df_connections[df_connections['connection_type'] == 'competence-knowledge']
+        df = df.drop(columns=['connection_type'])
+        df = df.merge(
+            df_knowledge[['knowledge_id', 'knowledge_priority']], 
+            how='left', 
+            left_on='target_id',   # The column in your connections frame
+            right_on='knowledge_id'    # The column in your skills frame
+        )
+        df = df.drop(columns=['knowledge_id'])
+        df = df.reset_index(drop=True)
         df['requires_k_id'] = [f"req_k_{i}" for i in range(1, len(df) + 1)]
         return df
+
 
 
 
