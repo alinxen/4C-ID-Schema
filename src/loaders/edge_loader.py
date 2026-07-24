@@ -45,13 +45,20 @@ def load_edges_to_neo4j(driver, edge_name, validated_data):
         MATCH (target:{tgt_label} {{{tgt_id_field}: row.{tgt_id_field}}})
         MERGE (source)-[r:{rel_type} {{{edge_id_field}: row.{edge_id_field}}}]->(target)
         SET r += row
+        RETURN row.{edge_id_field} AS id
     """
-    
     with driver.session() as session:
         # Upload edges
-        counter = session.run(query, data=validated_data).consume().counters
+        result = session.run(query, data=validated_data)
         
-        # How many edges of this type exist?
+        ##FAILED INSERTS
+        successful_ids = {r["id"] for r in result}
+        failed_ids = [row[edge_id_field] for row in validated_data if row[edge_id_field] not in successful_ids]
+        if failed_ids: 
+            print(f"Failed to insert: {failed_ids}")
+        
+        # Counter
+        counter = result.consume().counters
         count_query = f"MATCH ()-[r:{rel_type}]->() RETURN count(r) AS total_count"
         total_edges = session.run(count_query).single()["total_count"]
         

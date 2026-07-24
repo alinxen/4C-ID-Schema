@@ -3,6 +3,7 @@ import pandas as pd
 
 from src.config import ( 
     FRAMEWORK_CSV_PATH,
+    TARGET_CSV_PATH,
     SKILLS_CSV_PATH,
     KNOWLEDGE_CSV_PATH,
     COURSE_CSV_PATH,
@@ -75,8 +76,58 @@ class RequiresKTransformer():
         return df
 
 
+class DevelopsTransformer():
+    DATA = {
+        "target":
+            (TARGET_CSV_PATH, ['task_id', 'competence_id']),
+    }
+
+    def execute(self, extracted_data):
+        # Load competence data
+        develops = (extracted_data["target"]
+                    .copy()
+                    .rename(columns={'task_id': 'source_id', 'competence_id': 'target_id'})
+                    )
+
+        develops['develops_id'] = [f"dev_{i}" for i in range(1, len(develops) + 1)]
+        return develops
 
 
+class PracticesTransformer():
+    DATA = {
+        "target":
+            (TARGET_CSV_PATH, ['task_id', 'skill_id','cognitive_process']),
+    }
+
+    def execute(self, extracted_data):
+        # Load competence data
+        df = (extracted_data["target"]
+                    .copy()
+                    .rename(columns={'task_id': 'source_id', 'skill_id': 'target_id'})
+                    )
+
+        df['practices_id'] = "prac_" + (df.index + 1).astype(str)
+        return df
+
+
+class AppliesTransformer():
+    DATA = {
+        "target":
+            (TARGET_CSV_PATH, ['task_id', 'knowledge_id','knowledge_dimension']),
+    }
+
+    def execute(self, extracted_data):
+        # Load competence data
+        df = (extracted_data["target"]
+                    .copy()
+                    .rename(columns={'task_id': 'source_id', 'knowledge_id': 'target_id'})
+                    )
+
+        df['applies_id'] = "apl_" + (df.index + 1).astype(str)
+        return df
+
+
+#################################################
 
 class GroupsTransformer(EdgeTransformer):
     DATA = {
@@ -162,95 +213,3 @@ class TrainsTransformer(EdgeTransformer):
 
     
 
-class DevelopsTransformer():
-    DATA = {
-        "competence":
-            (COMPETENCE_CSV_PATH, ['task_title', 'competence_id', 'competence_title']),
-        "tasks":
-            (TASK_CSV_PATH, ['id', 'name'])
-    }
-
-    def execute(self, extracted_data):
-        tasks = (
-            extracted_data["tasks"]
-            .copy()
-            .rename(columns={'id': 'original_id', 'name': 'task_title'})
-            .assign(task_id=lambda df: df['task_title'].str[:2].str.upper())
-        )
-        
-        # Load competence data
-        competence = extracted_data["competence"].copy()
-        
-        # Merge
-        # Note: Ensure task_title is unique in tasks to avoid row duplication
-        merged_df = competence.merge(tasks, on='task_title', how='left')
-        
-        merged_df['develops_id'] = [f"dev_{i}" for i in range(1, len(merged_df) + 1)]
-
-        return merged_df
-
-
-class PracticesTransformer():
-    # Define the data requirements for the extractor
-    DATA = {
-        "skill": (COMPETENCE_CSV_PATH, ['task_title', 'task_to_skill', 'skill_id']),
-        "tasks": (TASK_CSV_PATH, ['id', 'name'])
-    }
-
-    def execute(self, extracted_data):
-        # Process Tasks (Create the lookup table)
-        tasks = (
-            extracted_data["tasks"]
-            .copy()
-            .rename(columns={'id': 'original_id', 'name': 'task_title'})
-            .assign(task_id=lambda df: df['task_title'].str[:2].str.upper())
-        )
-
-        # Process Competence & Merge
-        df = (
-            extracted_data["skill"]
-            .copy()
-            .rename(columns={'task_to_skill': 'cognitive_dimension'})
-            .dropna(subset=['skill_id', 'cognitive_dimension'])
-            # Inner merge ensures we only keep rows that have a matching task_id
-            .merge(tasks, on='task_title', how='inner')
-        )
-
-        # Add unique identifier
-        # Using a vectorized approach for speed
-        df['practices_id'] = "prac_" + (df.index + 1).astype(str)
-
-        return df
-
-
-class AppliesTransformer():
-    # Define the data requirements for the extractor
-    DATA = {
-        "knowledge": (COMPETENCE_CSV_PATH, ['task_title', 'needs_knowledge', 'knowledge_id']),
-        "tasks": (TASK_CSV_PATH, ['id', 'name'])
-    }
-
-    def execute(self, extracted_data):
-        # Process Tasks (Create the lookup table)
-        tasks = (
-            extracted_data["tasks"]
-            .copy()
-            .rename(columns={'id': 'original_id', 'name': 'task_title'})
-            .assign(task_id=lambda df: df['task_title'].str[:2].str.upper())
-        )
-
-        # Process Knowledge & Merge
-        df = (
-            extracted_data["knowledge"]
-            .copy()
-            .rename(columns={'needs_knowledge': 'knowledge_dimension'})
-            .dropna(subset=['knowledge_id', 'knowledge_dimension'])
-            # Inner merge ensures we only keep rows that have a matching task_id
-            .merge(tasks, on='task_title', how='inner')
-        )
-
-        # Add unique identifier
-        # Using a vectorized approach for speed
-        df['applies_id'] = "apl_" + (df.index + 1).astype(str)
-
-        return df

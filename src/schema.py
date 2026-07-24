@@ -31,17 +31,20 @@ class KNOWLEDGE(BaseModel):
     knowledge_group_title   : str
     
     
-##########################################################################
     
 class LEARNING_TASK(BaseModel):
     label                   : ClassVar[str] = "Learning_Task"
     task_id                 : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
-    course_id               : int
     task_title              : str
     task_type               : str
+    module_id               : int
+    max_points              : int
+    task_description        : str
+    main_library_id         : int
 
 
 
+##########################################################################
 
 
 
@@ -107,6 +110,33 @@ class REQUIRES_KNOWLEDGE(BaseModel):
     competence_id           : str = Field(..., validation_alias="source_id")
     knowledge_id            : str = Field(..., validation_alias="target_id")   
     
+class DEVELOPS_COMPETENCE(BaseModel):
+    label                   : ClassVar[str] = "DEVELOPS"
+    source_label            : ClassVar[str] = "Learning_Task"
+    target_label            : ClassVar[str] = "Competence"
+    develops_id             : str
+    task_id                 : str = Field(..., validation_alias="source_id")
+    competence_id           : str = Field(..., validation_alias="target_id") 
+    
+class PRACTICES_SKILL(BaseModel):
+    label                   : ClassVar[str] = "PRACTICES"
+    source_label            : ClassVar[str] = "Learning_Task"
+    target_label            : ClassVar[str] = "Skill"
+    practices_id            : str
+    task_id                 : str = Field(..., validation_alias="source_id")
+    skill_id                : str = Field(..., validation_alias="target_id")
+    cognitive_process       : str
+    
+class APPLIES_KNOWLEDGE(BaseModel):
+    label                   : ClassVar[str] = "APPLIES"
+    source_label            : ClassVar[str] = "Learning_Task"
+    target_label            : ClassVar[str] = "Knowledge"
+    applies_id              : str
+    task_id                 : str = Field(..., validation_alias="source_id")
+    knowledge_id            : str = Field(..., validation_alias="target_id")
+    knowledge_dimension     : str    
+    
+    
 ###############################################################################
     
     
@@ -114,40 +144,11 @@ class REQUIRES_KNOWLEDGE(BaseModel):
 
 
 
-class DEVELOPS_COMPETENCE(BaseModel):
-    label                   : ClassVar[str] = "DEVELOPS"
-    label_id                : ClassVar[str] = "develops_id"
-    source_label            : ClassVar[str] = "Learning_Task"
-    source_id_field         : ClassVar[str] = "task_id"
-    target_label            : ClassVar[str] = "Competence"
-    target_id_field         : ClassVar[str] = "competence_id"
-    develops_id             : str
-    task_id                 : str
-    competence_id           : str
 
-class PRACTICES_SKILL(BaseModel):
-    label                   : ClassVar[str] = "PRACTICES"
-    label_id                : ClassVar[str] = "practices_id"
-    source_label            : ClassVar[str] = "Learning_Task"
-    source_id_field         : ClassVar[str] = "task_id"
-    target_label            : ClassVar[str] = "Skill"
-    target_id_field         : ClassVar[str] = "skill_id"
-    practices_id            : str
-    task_id                 : str
-    skill_id                : str
-    cognitive_dimension     : str
+
+
     
-class APPLIES_KNOWLEDGE(BaseModel):
-    label                   : ClassVar[str] = "APPLIES"
-    label_id                : ClassVar[str] = "applies_id"
-    source_label            : ClassVar[str] = "Learning_Task"
-    source_id_field         : ClassVar[str] = "task_id"
-    target_label            : ClassVar[str] = "Knowledge"
-    target_id_field         : ClassVar[str] = "knowledge_id"
-    applies_id              : str
-    task_id                 : str
-    knowledge_id            : str
-    knowledge_dimension     : str    
+
     
 class ATTEMPTED(BaseModel):
     label                   : ClassVar[str] = "ATTEMPTED"

@@ -54,6 +54,49 @@ class KnowledgeTransformer(NodeTransformer):
         "knowledge": (KNOWLEDGE_CSV_PATH, ['knowledge_id', 'knowledge_title', 'knowledge_description', 'knowledge_group_id', 'knowledge_group_title'])
     }
 
+class TaskTransformer(NodeTransformer):
+    """
+    Reads learning tasks and HVP libraries, merges them, handles 
+    missing values, and formats them for Pydantic validation.
+    """
+    DATA = {
+        "tasks": (TASK_CSV_PATH, ['module_id','task_id','task_title','task_type','max_points','task_description']), 
+        "hvp":   (HVP_CSV_PATH, ['name', 'main_library_id'])
+    }
+        
+
+    def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
+        tasks = extracted_data["tasks"].copy()
+
+        hvp = extracted_data["hvp"].copy()
+        hvp = hvp.rename(columns={'name': 'task_title'})
+        
+        merged_tasks = tasks.merge(hvp, on="task_title", how="left")
+        merged_tasks = merged_tasks.dropna(subset=['task_id', 'task_title'])
+        return merged_tasks
+
+class StudentTransformer(NodeTransformer):
+    """
+    Loads all user information from user CSV and filters to only allow
+    students (student_id >= 3).
+    """
+    DATA = {
+        "user": (USER_CSV_PATH, ['id', 'username', 'firstname', 'lastname', 'email'])
+    }
+    
+    def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
+        df = extracted_data["user"].copy()
+        df = df.rename(columns={'id': 'student_id'})
+        df = df[df['student_id'] >= 3]
+        df['student_id'] = df['student_id'].astype(str)
+        return df
+
+
+
+
+
+
+
 
 
 
@@ -80,51 +123,10 @@ class PracticeTransformer(NodeTransformer):
         return df
         
         
-class StudentTransformer(NodeTransformer):
-    """
-    Loads all user information from user CSV and filters to only allow
-    students (student_id >= 3).
-    """
-    DATA = {
-        "user": (USER_CSV_PATH, ['id', 'username', 'firstname', 'lastname', 'email'])
-    }
-    
-    def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
-        df = extracted_data["user"].copy()
-        df = df.rename(columns={'id': 'student_id'})
-        df = df[df['student_id'] >= 3]
-        df['student_id'] = df['student_id'].astype(str)
-        return df
 
 
-class TaskTransformer(NodeTransformer):
-    """
-    Reads learning tasks and HVP libraries, merges them, handles 
-    missing values, and formats them for Pydantic validation.
-    """
-    DATA = {
-        "tasks": (TASK_CSV_PATH, ['id', 'course', 'name', 'main_library_id']),
-        "hvp":   (HVP_CSV_PATH, ['id', 'title'])
-    }
-        
-    def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
-        tasks = extracted_data["tasks"].copy()
-        tasks = tasks.rename(columns={'id': 'task_id', 'course': 'course_id', 'name': 'task_title'})
-        tasks = tasks.assign(
-            # Change id to the first two letters of the task name 
-            task_id=lambda df: df['task_title'].str[:2].str.upper()
-        )
 
-        hvp = extracted_data["hvp"].copy()
-        hvp = hvp.rename(columns={'id': 'main_library_id', 'title': 'task_type'})
 
-        # Merge both tables on 'main_library_id'
-        merged_tasks = tasks.merge(hvp, on="main_library_id", how="left")
-        
-        # Convert NaN to None to prevent Pydantic validation errors
-        merged_tasks = merged_tasks.where(pd.notna(merged_tasks), None)
-        
-        return merged_tasks
     
 
 class SupportiveTransformer(NodeTransformer):
