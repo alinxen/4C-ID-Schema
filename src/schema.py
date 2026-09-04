@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import ClassVar
+from datetime import datetime
 
 
 # -------------------------------------------------
@@ -42,7 +43,13 @@ class LEARNING_TASK(BaseModel):
     task_description        : str
     main_library_id         : int
 
-
+class STUDENT(BaseModel):
+    label                   : ClassVar[str] = "Student"
+    student_id              : int  = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    crud                    : str
+    edulevels               : str
+    total_events            : int
+    first_active            : datetime
 
 ##########################################################################
 
@@ -80,13 +87,7 @@ class LEARNING_SESSION(BaseModel):
     end_time                : str
     student_id              : str
     
-class STUDENT(BaseModel):
-    label                   : ClassVar[str] = "Student"
-    student_id              : str  = Field(..., json_schema_extra={"is_unique_neo4j": True})
-    username                : str 
-    firstname               : str 
-    lastname                : str 
-    email                   : str 
+
         
 # -------------------------------------------------
 # EDGES of the 4C/ID-SCHEMA

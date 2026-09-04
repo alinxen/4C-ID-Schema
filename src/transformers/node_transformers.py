@@ -11,8 +11,7 @@ from src.config import (
     HVP_CSV_PATH,
     LOGFILE_CSV_PATH,
     PAGES_CSV_PATH,
-    TASK_CSV_PATH,
-    USER_CSV_PATH
+    TASK_CSV_PATH
 )
 
 
@@ -81,26 +80,33 @@ class StudentTransformer(NodeTransformer):
     students (student_id >= 3).
     """
     DATA = {
-        "user": (USER_CSV_PATH, ['id', 'username', 'firstname', 'lastname', 'email'])
+        "user": (LOGFILE_CSV_PATH, ['userid', 'crud', 'edulevel','timecreated'])
     }
     
     def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
         df = extracted_data["user"].copy()
-        df = df.rename(columns={'id': 'student_id'})
-        df = df[df['student_id'] >= 3]
-        df['student_id'] = df['student_id'].astype(str)
-        return df
+        df = df.rename(columns={'userid': 'student_id'})
+        
+        # Filter out teachers and admins
+        #excluded_ids = [-1,4,392,1470,2698,3138]
+        #df = df[~df['student_id'].isin(excluded_ids)]
+
+        # Aggregate crud and edulevels per student
+        df_aggregated = df.groupby('student_id', as_index=False).agg(
+            crud=('crud', lambda x: ''.join(sorted(x.dropna().astype(str).unique(), key=lambda v: {'c': 1, 'r': 2, 'u': 3, 'd': 4}.get(v, 5)))),
+            edulevels=('edulevel', lambda x: '-'.join(sorted(x.dropna().astype(str).unique()))),
+            first_active=('timecreated', 'min'),
+            total_events=('student_id', 'count')
+        )
+        
+        # Convert Unix timestamp to readable datetime
+        df_aggregated['first_active'] = pd.to_datetime(df_aggregated['first_active'], unit='s')       
+        #df_aggregated['student_id'] = df_aggregated['student_id'].astype(str)
+        return df_aggregated
 
 
 
-
-
-
-
-
-
-
-#############################################################################
+###########################################################################
 
 
 

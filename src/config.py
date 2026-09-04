@@ -11,7 +11,6 @@ TARGET_CSV_PATH         = os.path.join(DATA_DIR,  "a_lernziele.csv")
 
 PAGES_CSV_PATH          = os.path.join(DATA_DIR, "m_page.csv")
 LOGFILE_CSV_PATH        = os.path.join(DATA_DIR,  "m_logstore_standard_log.csv")
-USER_CSV_PATH           = os.path.join(DATA_DIR,  "m_user.csv")
 XAPI_CSV_PATH           = os.path.join(DATA_DIR,  "m_hvp_xapi_results.csv")
 COURSE_CSV_PATH         = os.path.join(DATA_DIR,  "course_structure.csv")
 COMPLETED_CSV_PATH      = os.path.join(DATA_DIR,  "m_course_modules_completion.csv")
