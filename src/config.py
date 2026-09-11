@@ -1,5 +1,7 @@
 import os
 
+EXCLUDED_USER_IDS =[]#[-1,4,392,1470,2698,3138]
+
 DATA_DIR                = os.path.join(os.path.dirname(__file__), "..", "data")
 COMPETENCE_CSV_PATH     = os.path.join(DATA_DIR,  "c_competence.csv")
 SKILLS_CSV_PATH         = os.path.join(DATA_DIR,  "c_skills.csv")
@@ -8,10 +10,11 @@ FRAMEWORK_CSV_PATH      = os.path.join(DATA_DIR,  "c_competence_framework.csv")
 HVP_CSV_PATH            = os.path.join(DATA_DIR,  "m_hvp.csv")
 TASK_CSV_PATH           = os.path.join(DATA_DIR,  "a_lernaufgaben.csv")
 TARGET_CSV_PATH         = os.path.join(DATA_DIR,  "a_lernziele.csv")
-
-PAGES_CSV_PATH          = os.path.join(DATA_DIR, "m_page.csv")
 LOGFILE_CSV_PATH        = os.path.join(DATA_DIR,  "m_logstore_standard_log.csv")
 XAPI_CSV_PATH           = os.path.join(DATA_DIR,  "m_hvp_xapi_results.csv")
+
+
+PAGES_CSV_PATH          = os.path.join(DATA_DIR,  "m_page.csv")
 COURSE_CSV_PATH         = os.path.join(DATA_DIR,  "course_structure.csv")
 COMPLETED_CSV_PATH      = os.path.join(DATA_DIR,  "m_course_modules_completion.csv")
 COURSE_MODULE_CSV_PATH  = os.path.join(DATA_DIR,  "m_course_modules.csv")

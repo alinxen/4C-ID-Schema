@@ -171,6 +171,17 @@ class ATTEMPTED(BaseModel):
     task_id                 : str
     student_id              : str
     
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
  
     
 class GROUPS(BaseModel):

@@ -1,34 +1,47 @@
 import pandas as pd
-import json
+import phpserialize
 
-from src.config import GRADE_GRADES_CSV_PATH, COMPLETED_CSV_PATH, COURSE_MODULE_CSV_PATH, TASK_CSV_PATH, COURSE_CSV_PATH, LOGFILE_CSV_PATH, XAPI_CSV_PATH, HVP_CSV_PATH
+from src.config import (
+    EXCLUDED_USER_IDS,
+    GRADE_GRADES_CSV_PATH, 
+    COMPLETED_CSV_PATH, 
+    COURSE_MODULE_CSV_PATH, 
+    TASK_CSV_PATH, 
+    COURSE_CSV_PATH, 
+    LOGFILE_CSV_PATH, 
+    XAPI_CSV_PATH, 
+    HVP_CSV_PATH
+    )
 
 # =====================================================================
 # SHARED UTILITY FUNCTIONS (Used by both Attempted and Finished)
 # =====================================================================
 
-def get_hotspot_task_ids(tasks_df, libs_df):
+def get_hotspot_task_ids(tasks_df):
     """Identifies all tasks that are of the type 'Find Multiple Hotspots'."""
-    target_lib_ids = libs_df[libs_df['title'] == "Find Multiple Hotspots"]['id']
-    hotspot_tasks = tasks_df[tasks_df['main_library_id'].isin(target_lib_ids)]
-    return hotspot_tasks['id'].tolist()
+    hotspot_df = tasks_df[tasks_df['task_type'] == "Find Multiple Hotspots"]
+    
+    return hotspot_df['grade_item_id'].astype(int).tolist()
 
 def parse_graded_events(logfile_df):
-    """Filters user_graded events and extracts the JSON objectid and finalgrade."""
+    """Filters user_graded events and extracts the PHP objectid and finalgrade."""
     graded_events = logfile_df[logfile_df['eventname'] == r'\core\event\user_graded'].copy()
-    if graded_events.empty:
-        return graded_events
-
-    parsed_json = [json.loads(val) if isinstance(val, str) else {} for val in graded_events['other']]
-    expanded_df = pd.DataFrame(parsed_json, index=graded_events.index)
     
-    graded_events['objectid'] = pd.to_numeric(expanded_df['itemid'], errors='coerce') - 2
+    # Parse the php-string in the column 'other' to get information about the event
+    parsed_php = [
+    phpserialize.loads(val.replace('""', '"').encode('utf-8'), decode_strings=True) 
+    if isinstance(val, str) else {} 
+    for val in graded_events['other']
+    ]
+    
+    expanded_df = pd.DataFrame(parsed_php, index=graded_events.index)
+    graded_events['grade_item_id'] = pd.to_numeric(expanded_df['itemid'], errors='coerce')
     graded_events['result']   = pd.to_numeric(expanded_df['finalgrade'], errors='coerce')
     
-    graded_events = (graded_events
-                     .dropna(subset=['objectid', 'result', 'userid', 'timecreated'])
-                     .astype({'objectid': int, 'userid': str}))
-    return graded_events
+    return (graded_events
+                     .dropna(subset=['grade_item_id', 'result', 'userid', 'timecreated'])
+                     .astype({'grade_item_id': int, 'userid': str}))
+
 
 def calculate_true_hotspot_scores(hotspot_df):
     """Aggregates hotspot clicks into 10-minute blocks and calculates custom scores."""
@@ -207,20 +220,27 @@ class FinishedTransformer:
 
 class AttemptedTransformer():
     DATA = {
-        "logfile": (LOGFILE_CSV_PATH, ['userid', 'eventname', 'other', 'timecreated', 'objectid']),
+        "logfile": (LOGFILE_CSV_PATH, ['userid', 'eventname', 'other', 'timecreated','objecttable' ,'objectid']),
         "xapi": (XAPI_CSV_PATH, ['user_id', 'content_id', 'correct_responses_pattern', 'response']),
-        "tasks": (TASK_CSV_PATH, ['id', 'main_library_id']),
-        "libs": (HVP_CSV_PATH,  ['id', 'title']),
-        "moodle_tasks": (TASK_CSV_PATH, ['id', 'name']),
-        "blueprint": (COURSE_CSV_PATH, ['task_id', 'task'])
+        "tasks": (TASK_CSV_PATH, ['grade_item_id', 'task_type']),
+        
+        #"tasks": (TASK_CSV_PATH, ['module_id','task_type']),#,'task_id','task_title','max_points','task_description']), 
+        #"hvp":   (HVP_CSV_PATH, ['name', 'main_library_id']),
+        #"moodle_tasks": (TASK_CSV_PATH, ['id', 'name']),
+        #"blueprint": (COURSE_CSV_PATH, ['task_id', 'task'])
     }
             
     def _fetch_data(self, extracted_data):
         logfile = extracted_data["logfile"].copy()
-        logfile['timecreated'] = pd.to_datetime(logfile['timecreated'] + 3600, unit='s')
-        logfile['userid'] = pd.to_numeric(logfile['userid'], errors='coerce')
-        logfile = logfile[~logfile['userid'].isin([1, 2])].copy()
-        logfile['userid'] = logfile['userid'].astype(str)
+        
+        # Convert Unix timestamp to readable datetime and adjust timezone
+        logfile['timecreated'] = pd.to_datetime(logfile['timecreated'], unit='s', utc=True)
+        logfile['timecreated'] = logfile['timecreated'].dt.tz_convert('Europe/Berlin')
+        logfile['timecreated'] = logfile['timecreated'].dt.tz_localize(None)
+        
+        # Filter out admins
+        logfile = logfile[~logfile['userid'].isin(EXCLUDED_USER_IDS)].copy()
+
         return logfile, extracted_data["xapi"].copy()
 
     def _process_standard_attempts(self, standard_df, xapi_df):
@@ -248,63 +268,55 @@ class AttemptedTransformer():
         return merged.set_index('id')['task_id'].to_dict()
 
     def _recover_ungraded_attempts(self, logfile_df, graded_events):
-        logfile_df = logfile_df.sort_values('timecreated')
-        submissions = logfile_df[logfile_df['eventname'] == r'\mod_hvp\event\attempt_submitted'].copy()
-        grades = graded_events.copy()
-        if submissions.empty or grades.empty: return pd.DataFrame()
-
-        matched_forward = pd.merge_asof(submissions, grades[['timecreated', 'eventname']], on='timecreated', direction='forward', tolerance=pd.Timedelta(seconds=40), suffixes=('', '_fwd'))
-        matched_backward = pd.merge_asof(submissions, grades[['timecreated', 'eventname']], on='timecreated', direction='backward', tolerance=pd.Timedelta(seconds=40), suffixes=('', '_bwd'))
-        unpaired_mask = matched_forward['eventname_fwd'].isna() & matched_backward['eventname_bwd'].isna()
-        unpaired_submissions = matched_forward[unpaired_mask].drop(columns=['eventname_fwd']).copy()
+        # Moodle sometimes forgets to record the corresponding grade at the same timestamp as the attempt,
+        # so we could scan 40s before and after the attempt to find the grade. For now, we've decided
+        # to omit this step
+        return pd.DataFrame()         
         
-        if unpaired_submissions.empty: return pd.DataFrame()
-            
-        views = logfile_df[logfile_df['eventname'] == r'\mod_hvp\event\course_module_viewed'].copy()
-        views['objectid'] = pd.to_numeric(views['objectid'], errors='coerce')
-        recovered = pd.merge_asof(unpaired_submissions.drop(columns=['objectid']), views[['userid', 'timecreated', 'objectid']], on='timecreated', by='userid', direction='backward')
-        recovered = recovered.dropna(subset=['objectid'])
         
-        latest_grades = grades.sort_values('timecreated').groupby(['userid', 'objectid']).last().reset_index()
-        return pd.merge(recovered, latest_grades[['userid', 'objectid', 'result']], on=['userid', 'objectid'], how='inner')
+        
 
     def execute(self, extracted_data):
+        
         logfile_df, xapi_df = self._fetch_data(extracted_data)
-        
-        # Uses the shared utility functions!
-        hotspot_ids = get_hotspot_task_ids(extracted_data["tasks"], extracted_data["libs"])
+                
+        # Extract objectid and results from the 'other' column
         graded_events = parse_graded_events(logfile_df)
+                
+        # Find attempts without recorded grades
+        #recovered_events = self._recover_ungraded_attempts(logfile_df, graded_events)
         
-        recovered_events = self._recover_ungraded_attempts(logfile_df, graded_events)
-        
-        if not recovered_events.empty:
-            recovered_events = recovered_events[~recovered_events['objectid'].isin(hotspot_ids)].copy()
-            recovered_events['is_recovered'] = True 
-            graded_events = pd.concat([graded_events, recovered_events], ignore_index=True)
-            graded_events['is_recovered'] = graded_events['is_recovered'].fillna(False)
-            
-        is_hotspot = graded_events['objectid'].isin(hotspot_ids)
-        standard_attempts = graded_events[~is_hotspot].copy()
-        hotspot_attempts  = graded_events[is_hotspot].copy()
-        
-        standard_attempts = self._process_standard_attempts(standard_attempts, xapi_df)
-        hotspot_attempts  = self._process_hotspot_attempts(hotspot_attempts)
+        # Hotspots
+        hotspot_ids = get_hotspot_task_ids(extracted_data["tasks"])
+        hotspot_attempts = graded_events[graded_events['grade_item_id'].isin(hotspot_ids)]
 
-        all_attempts = pd.concat([standard_attempts, hotspot_attempts], ignore_index=True)
-        task_prefix_map = self._create_task_map(extracted_data)
+
         
-        all_attempts['score'] = all_attempts['result'].astype(float).round(1)
-        all_attempts['passed'] = all_attempts['score'] >= 8.0
-        all_attempts['student_response'] = all_attempts['response'].astype(str)
-        all_attempts['correct_response'] = all_attempts['correct_responses_pattern'].astype(str)
-        all_attempts['task_id'] = all_attempts['objectid'].astype(int).map(lambda x: task_prefix_map.get(x, "LT"))
-        all_attempts['student_id'] = all_attempts['userid'].astype(str)
-        all_attempts['timestamp'] = all_attempts['timecreated'].apply(lambda x: x.isoformat())
+        ### CONTINUE HERE:
+        # hotspot_attempts  = self._process_hotspot_attempts(hotspot_attempts)
+        print(hotspot_attempts)
+        graded_events.to_csv('output.csv', index=False)
         
-        all_attempts['attempted_id'] = "r_at_" + all_attempts['student_id'] + "_" + all_attempts['task_id'] + "_" + all_attempts['timestamp']
+        # Standard Attempts
+        # standard_attempts = graded_events[~is_hotspot].copy()
+        # standard_attempts = self._process_standard_attempts(standard_attempts, xapi_df)
         
-        if 'is_recovered' in all_attempts.columns:
-            all_attempts.loc[all_attempts['is_recovered'] == True, 'student_response'] = ""
+
+        # all_attempts = pd.concat([standard_attempts, hotspot_attempts], ignore_index=True)
+        # task_prefix_map = self._create_task_map(extracted_data)
         
-        columns_to_keep = ['attempted_id', 'timestamp', 'score', 'passed', 'student_response', 'correct_response', 'task_id', 'student_id']
-        return all_attempts[columns_to_keep]
+        # all_attempts['score'] = all_attempts['result'].astype(float).round(1)
+        # all_attempts['passed'] = all_attempts['score'] >= 8.0
+        # all_attempts['student_response'] = all_attempts['response'].astype(str)
+        # all_attempts['correct_response'] = all_attempts['correct_responses_pattern'].astype(str)
+        # all_attempts['task_id'] = all_attempts['objectid'].astype(int).map(lambda x: task_prefix_map.get(x, "LT"))
+        # all_attempts['student_id'] = all_attempts['userid'].astype(str)
+        # all_attempts['timestamp'] = all_attempts['timecreated'].apply(lambda x: x.isoformat())
+        
+        # all_attempts['attempted_id'] = "r_at_" + all_attempts['student_id'] + "_" + all_attempts['task_id'] + "_" + all_attempts['timestamp']
+        
+        # if 'is_recovered' in all_attempts.columns:
+        #     all_attempts.loc[all_attempts['is_recovered'] == True, 'student_response'] = ""
+        
+        # columns_to_keep = ['attempted_id', 'timestamp', 'score', 'passed', 'student_response', 'correct_response', 'task_id', 'student_id']
+        #return all_attempts[columns_to_keep]

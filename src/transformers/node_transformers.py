@@ -4,6 +4,7 @@ from typing import Dict, Any
 import pandas as pd
 
 from src.config import ( 
+    EXCLUDED_USER_IDS,
     COMPETENCE_CSV_PATH,
     SKILLS_CSV_PATH,
     KNOWLEDGE_CSV_PATH,
@@ -76,8 +77,7 @@ class TaskTransformer(NodeTransformer):
 
 class StudentTransformer(NodeTransformer):
     """
-    Loads all user information from user CSV and filters to only allow
-    students (student_id >= 3).
+    Loads all user information from user CSV
     """
     DATA = {
         "user": (LOGFILE_CSV_PATH, ['userid', 'crud', 'edulevel','timecreated'])
@@ -88,8 +88,7 @@ class StudentTransformer(NodeTransformer):
         df = df.rename(columns={'userid': 'student_id'})
         
         # Filter out teachers and admins
-        #excluded_ids = [-1,4,392,1470,2698,3138]
-        #df = df[~df['student_id'].isin(excluded_ids)]
+        df = df[~df['student_id'].isin(EXCLUDED_USER_IDS)]
 
         # Aggregate crud and edulevels per student
         df_aggregated = df.groupby('student_id', as_index=False).agg(
@@ -104,19 +103,6 @@ class StudentTransformer(NodeTransformer):
         df_aggregated['first_active'] = df_aggregated['first_active'].dt.tz_convert('Europe/Berlin')
         df_aggregated['first_active'] = df_aggregated['first_active'].dt.tz_localize(None)
         return df_aggregated
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 class LearningSessionTransformer(NodeTransformer):
     """
@@ -145,8 +131,7 @@ class LearningSessionTransformer(NodeTransformer):
         df = df.sort_values(by=['userid', 'timecreated']).reset_index(drop=True)
                
         # Filter out teachers and admins
-        #excluded_ids = [-1,4,392,1470,2698,3138]
-        #df = df[~df['userid'].isin(excluded_ids)]
+        df = df[~df['userid'].isin(EXCLUDED_USER_IDS)]
         
         return df
 
@@ -171,7 +156,7 @@ class LearningSessionTransformer(NodeTransformer):
         # Drop sessions where the student only clicked once
         sessions_df = sessions_df[sessions_df['start_time'] != sessions_df['end_time']].copy()
         
-        # Handle "single-click" sessions (where start == end) by adding a 2-minute buffer
+        # Alternative: Handle "single-click" sessions (where start == end) by adding a 2-minute buffer
         #single_event_mask = sessions_df['start_time'] == sessions_df['end_time']
         #sessions_df.loc[single_event_mask, 'end_time'] += pd.Timedelta(minutes=2)
         #sessions_df['session_duration'] = (sessions_df['end_time'] - sessions_df['start_time']).dt.total_seconds().astype(int)
@@ -182,8 +167,8 @@ class LearningSessionTransformer(NodeTransformer):
             learning_sessions.append({
                 "session_id": f"session_{row.session_idx}",
                 "student_id": row.userid,
-                "start_time": row.start_time.isoformat(), 
-                "end_time":   row.end_time.isoformat(),
+                "start_time": row.start_time, 
+                "end_time":   row.end_time,
                 "total_actions": row.total_actions
             })
             

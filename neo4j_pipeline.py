@@ -32,7 +32,7 @@ NODE_PIPELINE = [
 
 EDGE_PIPELINE = [
      ("APPLIES_KNOWLEDGE",   tf.AppliesTransformer),
-    # ("ATTEMPTED",           tf.AttemptedTransformer),
+     ("ATTEMPTED",           tf.AttemptedTransformer),
     # ("CONSULTED",           tf.ConsultedTransformer),
     # ("CUES",                tf.CuesTransformer),
      ("DEVELOPS_COMPETENCE", tf.DevelopsTransformer),
@@ -69,7 +69,6 @@ def etvl_pipeline(db, entity_type, PIPELINE):
                                  
             transformer      = TransformerClass()
             transformed_data = transformer.execute(extracted_data)
-            transformed_data.to_csv('moodle_user_sessions.csv', index=False)
                                  
             validator        = PydanticValidator(label)
             validated_data   = validator.validate(transformed_data)
