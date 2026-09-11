@@ -16,7 +16,7 @@ import src.transformers as tf
 NODE_PIPELINE = [
      ("COMPETENCE",             tf.CompetenceTransformer),
      ("KNOWLEDGE",              tf.KnowledgeTransformer),
-    # ("LEARNING_SESSION",       tf.LearningSessionTransformer),
+     ("LEARNING_SESSION",       tf.LearningSessionTransformer),
      ("LEARNING_TASK",          tf.TaskTransformer),
     # ("PART_TASK_PRACTICE",     tf.PracticeTransformer),
     # ("PROCEDURAL_INFORMATION", tf.ProceduralTransformer),
@@ -69,6 +69,7 @@ def etvl_pipeline(db, entity_type, PIPELINE):
                                  
             transformer      = TransformerClass()
             transformed_data = transformer.execute(extracted_data)
+            transformed_data.to_csv('moodle_user_sessions.csv', index=False)
                                  
             validator        = PydanticValidator(label)
             validated_data   = validator.validate(transformed_data)

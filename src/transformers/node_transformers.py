@@ -99,10 +99,117 @@ class StudentTransformer(NodeTransformer):
             total_events=('student_id', 'count')
         )
         
-        # Convert Unix timestamp to readable datetime
-        df_aggregated['first_active'] = pd.to_datetime(df_aggregated['first_active'], unit='s')       
-        #df_aggregated['student_id'] = df_aggregated['student_id'].astype(str)
+        # Convert Unix timestamp to readable datetime and adjust timezone
+        df_aggregated['first_active'] = pd.to_datetime(df_aggregated['first_active'], unit='s', utc=True)
+        df_aggregated['first_active'] = df_aggregated['first_active'].dt.tz_convert('Europe/Berlin')
+        df_aggregated['first_active'] = df_aggregated['first_active'].dt.tz_localize(None)
         return df_aggregated
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class LearningSessionTransformer(NodeTransformer):
+    """
+    Reads the raw logfile, calculates sessions for all students,
+    and returns a clean list of validated Pydantic dictionaries.
+    """
+    DATA = {
+        "logfile": (LOGFILE_CSV_PATH,  ['userid', 'timecreated', 'action'])
+    }
+
+    def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
+        """Extract and validate data."""
+        df_raw = extracted_data["logfile"].copy()
+        df_clean = self._prepare_data(df_raw)
+        learning_sessions = self._process_user_sessions(df_clean)
+        return pd.DataFrame(learning_sessions)
+
+    def _prepare_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Adjust timezone, sort chronologically, and remove system/admin accounts."""
+        
+        # Convert Unix timestamp to readable datetime and adjust timezone
+        df['timecreated'] = pd.to_datetime(df['timecreated'], unit='s', utc=True)
+        df['timecreated'] = df['timecreated'].dt.tz_convert('Europe/Berlin')
+        df['timecreated'] = df['timecreated'].dt.tz_localize(None)
+        
+        df = df.sort_values(by=['userid', 'timecreated']).reset_index(drop=True)
+               
+        # Filter out teachers and admins
+        #excluded_ids = [-1,4,392,1470,2698,3138]
+        #df = df[~df['userid'].isin(excluded_ids)]
+        
+        return df
+
+    def _process_user_sessions(self, df: pd.DataFrame) -> list:
+        """
+        Groups events into sessions based on a 30-minute inactivity threshold 
+        using vectorized Pandas operations.
+        """
+        # Calculate time gaps and session boundaries
+        df['time_gap'] = df.groupby('userid')['timecreated'].diff()
+        is_new_session = df['time_gap'] > pd.Timedelta(minutes=30)
+        is_first_event = df['time_gap'].isna()
+        df['session_idx'] = (is_new_session | is_first_event).cumsum()
+        
+        # Group by user and the new session index to get exact start and end boundaries
+        sessions_df = df.groupby(['userid', 'session_idx']).agg(
+            start_time=('timecreated', 'min'),
+            end_time=('timecreated', 'max'),
+            total_actions=('action', 'count')
+        ).reset_index()
+        
+        # Drop sessions where the student only clicked once
+        sessions_df = sessions_df[sessions_df['start_time'] != sessions_df['end_time']].copy()
+        
+        # Handle "single-click" sessions (where start == end) by adding a 2-minute buffer
+        #single_event_mask = sessions_df['start_time'] == sessions_df['end_time']
+        #sessions_df.loc[single_event_mask, 'end_time'] += pd.Timedelta(minutes=2)
+        #sessions_df['session_duration'] = (sessions_df['end_time'] - sessions_df['start_time']).dt.total_seconds().astype(int)
+        
+        # Format output into the final list of dictionaries
+        learning_sessions = []
+        for row in sessions_df.itertuples():
+            learning_sessions.append({
+                "session_id": f"session_{row.session_idx}",
+                "student_id": row.userid,
+                "start_time": row.start_time.isoformat(), 
+                "end_time":   row.end_time.isoformat(),
+                "total_actions": row.total_actions
+            })
+            
+        return learning_sessions
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -205,69 +312,3 @@ class ProceduralTransformer(NodeTransformer):
         return pages_procedural
 
  
-class LearningSessionTransformer(NodeTransformer):
-    """
-    Reads the raw logfile, calculates sessions for all students,
-    and returns a clean list of validated Pydantic dictionaries.
-    """
-    DATA = {
-        "logfile": (LOGFILE_CSV_PATH,  ['userid', 'timecreated', 'action'])
-    }
-
-    def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
-        """Extract and validate data."""
-        df_raw = extracted_data["logfile"].copy()
-        df_clean = self._prepare_data(df_raw)
-        learning_sessions = self._process_user_sessions(df_clean)
-        
-        return pd.DataFrame(learning_sessions)
-
-    def _prepare_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Adjust timezone, sort chronologically, and remove system/admin accounts."""
-        df['timecreated'] = pd.to_datetime(df['timecreated'] + 3600, unit='s')
-        df = df.sort_values(by=['userid', 'timecreated']).reset_index(drop=True)
-        df = df[df['userid'] >= 3]
-        
-        return df
-
-    def _process_user_sessions(self, df: pd.DataFrame) -> list:
-        """Iterates through all users and applies the session state machine logic."""
-        learning_sessions = []
-
-        for user_id, user_logs in df.groupby('userid'):
-            current_login_time = None
-            last_action_time = None
-
-            for row in user_logs.itertuples():
-                if row.action == 'loggedin':
-                    # Close dangling previous session if needed
-                    if current_login_time is not None:
-                        inferred_logout = last_action_time + timedelta(minutes=2)
-                        self._append_session(learning_sessions, user_id, current_login_time, inferred_logout)
-                    
-                    current_login_time = row.timecreated
-
-                elif row.action == 'loggedout':
-                    # Close session normally
-                    if current_login_time is not None:
-                        self._append_session(learning_sessions, user_id, current_login_time, row.timecreated)
-                        current_login_time = None  # Reset state
-
-                # Continuously update the last action time
-                last_action_time = row.timecreated
-
-            # Handle a dangling login at the very end of the user's log history
-            if current_login_time is not None:
-                inferred_logout = last_action_time + timedelta(minutes=2)
-                self._append_session(learning_sessions, user_id, current_login_time, inferred_logout)
-
-        return learning_sessions
-
-    def _append_session(self, sessions_list: list, user_id: int, start_time: pd.Timestamp, end_time: pd.Timestamp):
-        """Collects raw session data into a list of dictionaries."""
-        sessions_list.append({
-            "session_id": f"session_{user_id}_{start_time.strftime('%Y-%m-%dT%H:%M:%S')}",
-            "student_id": str(user_id),
-            "start_time": start_time.isoformat(), 
-            "end_time":   end_time.isoformat(),
-        })

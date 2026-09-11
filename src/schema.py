@@ -51,6 +51,15 @@ class STUDENT(BaseModel):
     total_events            : int
     first_active            : datetime
 
+class LEARNING_SESSION(BaseModel):
+    label                   : ClassVar[str] = "Learning_Session"
+    session_id              : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    start_time              : datetime
+    end_time                : datetime
+    student_id              : int
+    total_actions           : int
+    
+    
 ##########################################################################
 
 
@@ -80,12 +89,7 @@ class PART_TASK_PRACTICE(BaseModel):
     practice_id             : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
     practice_title          : str     
     
-class LEARNING_SESSION(BaseModel):
-    label                   : ClassVar[str] = "Learning_Session"
-    session_id              : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
-    start_time              : str
-    end_time                : str
-    student_id              : str
+
     
 
         
