@@ -42,32 +42,32 @@ def parse_graded_events(logfile_df):
                      .dropna(subset=['grade_item_id', 'result', 'userid', 'timecreated'])
                      .astype({'grade_item_id': int, 'userid': str}))
 
-
 def calculate_true_hotspot_scores(hotspot_df):
-    """Aggregates hotspot clicks into 10-minute blocks and calculates custom scores."""
-    if hotspot_df.empty:
-        return pd.DataFrame()
-        
-    scoring_rules = {3: 4, 21: 16}
+    """Groups hotspot clicks into attempts that start whenever the score resets to 0.0."""
 
-    first_click   = hotspot_df.groupby(['userid', 'objectid'])['timecreated'].transform('first')
-    attempt_block = ((hotspot_df['timecreated'] - first_click) // pd.Timedelta('10min')).astype(int)
+    #hotspot_df['timecreated'] = pd.to_datetime(hotspot_df['timecreated'])
+    hotspot_df = hotspot_df.sort_values(by=['userid', 'grade_item_id', 'timecreated'])
     
-    hs_processed = (
-        hotspot_df.assign(attempt_block=attempt_block)
-        .groupby(['userid', 'objectid', 'attempt_block'])
-        .agg(timecreated=('timecreated', 'max'), number_clicks=('objectid', 'size'))
-        .reset_index()
+    # 2. The magic step: Create an attempt ID that increases by 1 every time result == 0.0
+    # Grouping by user and object ensures the attempt ID resets for different users/exercises
+    hotspot_df['attempt_id'] = hotspot_df.groupby(['userid', 'grade_item_id'])['result'].transform(
+        lambda x: (x == 0.0).cumsum()
     )
     
-    hs_processed['result'] = 0.0
-    hs_processed['required_clicks'] = hs_processed['objectid'].map(scoring_rules)
-    
-    valid_mask = hs_processed['required_clicks'].notna() & (hs_processed['number_clicks'] >= hs_processed['required_clicks'])
-    hs_processed.loc[valid_mask, 'result'] = (hs_processed.loc[valid_mask, 'required_clicks'] / hs_processed.loc[valid_mask, 'number_clicks']) * 10
-    
-    hs_processed.drop(columns=['required_clicks'], inplace=True)
+    # 3. Group by our new dynamically generated attempt_id and grab the max grade
+    hs_processed = (
+        hotspot_df.groupby(['userid', 'grade_item_id', 'attempt_id'])
+        .agg(
+            attempt_start_time=('timecreated', 'min'), # When they clicked the first 0
+            attempt_end_time=('timecreated', 'max'),   # When they hit their final score
+            number_clicks=('grade_item_id', 'size'),        # Total clicks in this attempt
+            final_grade=('result', 'max')              # The highest score reached
+        )
+        .reset_index()
+    )
+
     return hs_processed
+
 
 
 # =====================================================================
@@ -244,13 +244,19 @@ class AttemptedTransformer():
         return logfile, extracted_data["xapi"].copy()
 
     def _process_standard_attempts(self, standard_df, xapi_df):
-        if standard_df.empty: return pd.DataFrame()
+        
         standard_df['is_latest'] = (standard_df.groupby(['userid', 'objectid'])['timecreated'].transform('max') == standard_df['timecreated'])
+        
         xapi = xapi_df.rename(columns={'content_id': 'objectid', 'user_id': 'userid'}).astype({'userid': str})
+        
         attempts = pd.merge(standard_df, xapi[['userid', 'objectid', 'correct_responses_pattern', 'response']], on=['userid', 'objectid'], how='left')
+        
         attempts.loc[~attempts['is_latest'], ['correct_responses_pattern', 'response']] = None
+        
         attempts.fillna({'correct_responses_pattern': "", 'response': ""}, inplace=True)
+        
         attempts.drop(columns=['is_latest'], inplace=True)
+        
         return attempts
         
     def _process_hotspot_attempts(self, hotspot_df):
@@ -289,34 +295,36 @@ class AttemptedTransformer():
         # Hotspots
         hotspot_ids = get_hotspot_task_ids(extracted_data["tasks"])
         hotspot_attempts = graded_events[graded_events['grade_item_id'].isin(hotspot_ids)]
-
-
+        hotspot_attempts  = self._process_hotspot_attempts(hotspot_attempts)
         
-        ### CONTINUE HERE:
-        # hotspot_attempts  = self._process_hotspot_attempts(hotspot_attempts)
-        print(hotspot_attempts)
-        graded_events.to_csv('output.csv', index=False)
+        
+        ####################### CONTINUE HERE !!!!
+        
         
         # Standard Attempts
-        # standard_attempts = graded_events[~is_hotspot].copy()
-        # standard_attempts = self._process_standard_attempts(standard_attempts, xapi_df)
+        standard_attempts = graded_events[~graded_events['grade_item_id'].isin(hotspot_ids)]
+        standard_attempts = self._process_standard_attempts(standard_attempts, xapi_df)
         
+        
+        
+        print(standard_attempts)
+        hotspot_attempts.to_csv('output.csv', index=False)
 
-        # all_attempts = pd.concat([standard_attempts, hotspot_attempts], ignore_index=True)
-        # task_prefix_map = self._create_task_map(extracted_data)
+        all_attempts = pd.concat([standard_attempts, hotspot_attempts], ignore_index=True)
+        task_prefix_map = self._create_task_map(extracted_data)
         
-        # all_attempts['score'] = all_attempts['result'].astype(float).round(1)
-        # all_attempts['passed'] = all_attempts['score'] >= 8.0
-        # all_attempts['student_response'] = all_attempts['response'].astype(str)
-        # all_attempts['correct_response'] = all_attempts['correct_responses_pattern'].astype(str)
-        # all_attempts['task_id'] = all_attempts['objectid'].astype(int).map(lambda x: task_prefix_map.get(x, "LT"))
-        # all_attempts['student_id'] = all_attempts['userid'].astype(str)
-        # all_attempts['timestamp'] = all_attempts['timecreated'].apply(lambda x: x.isoformat())
+        all_attempts['score'] = all_attempts['result'].astype(float).round(1)
+        all_attempts['passed'] = all_attempts['score'] >= 8.0
+        all_attempts['student_response'] = all_attempts['response'].astype(str)
+        all_attempts['correct_response'] = all_attempts['correct_responses_pattern'].astype(str)
+        all_attempts['task_id'] = all_attempts['objectid'].astype(int).map(lambda x: task_prefix_map.get(x, "LT"))
+        all_attempts['student_id'] = all_attempts['userid'].astype(str)
+        all_attempts['timestamp'] = all_attempts['timecreated'].apply(lambda x: x.isoformat())
         
-        # all_attempts['attempted_id'] = "r_at_" + all_attempts['student_id'] + "_" + all_attempts['task_id'] + "_" + all_attempts['timestamp']
+        all_attempts['attempted_id'] = "r_at_" + all_attempts['student_id'] + "_" + all_attempts['task_id'] + "_" + all_attempts['timestamp']
         
-        # if 'is_recovered' in all_attempts.columns:
-        #     all_attempts.loc[all_attempts['is_recovered'] == True, 'student_response'] = ""
+        if 'is_recovered' in all_attempts.columns:
+            all_attempts.loc[all_attempts['is_recovered'] == True, 'student_response'] = ""
         
-        # columns_to_keep = ['attempted_id', 'timestamp', 'score', 'passed', 'student_response', 'correct_response', 'task_id', 'student_id']
-        #return all_attempts[columns_to_keep]
+        columns_to_keep = ['attempted_id', 'timestamp', 'score', 'passed', 'student_response', 'correct_response', 'task_id', 'student_id']
+        return all_attempts[columns_to_keep]

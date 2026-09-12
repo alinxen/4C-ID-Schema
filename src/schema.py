@@ -157,19 +157,16 @@ class APPLIES_KNOWLEDGE(BaseModel):
     
 class ATTEMPTED(BaseModel):
     label                   : ClassVar[str] = "ATTEMPTED"
-    label_id                : ClassVar[str] = "attempted_id"
     source_label            : ClassVar[str] = "Student"
-    source_id_field         : ClassVar[str] = "student_id"
     target_label            : ClassVar[str] = "Learning_Task"
-    target_id_field         : ClassVar[str] = "task_id"
     attempted_id            : str
     timestamp               : str
     score                   : float
     passed                  : bool
     student_response        : str 
     correct_response        : str
-    task_id                 : str
-    student_id              : str
+    task_id                 : str = Field(..., validation_alias="target_id")
+    student_id              : str = Field(..., validation_alias="source_id")
     
     
     
