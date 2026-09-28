@@ -66,34 +66,47 @@ class TASK_CLASS(BaseModel):
     section_id              : int
     class_description       : str
 
+class PART_TASK_PRACTICE(BaseModel):
+    label                   : ClassVar[str] = "Part_Task_Practice"
+    practice_id             : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    practice_title          : str  
+    module_id               : int
+    subtasks                : str
+    question_text           : str 
+    correct_answer          : str 
+    max_points              : int
+    
+class PROCEDURAL_INFORMATION(BaseModel):
+    label                   : ClassVar[str] = "Procedural_Information"
+    pi_id                   : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    pi_title                : str    
+    module_id               : int
+    section_id              : int
+    page_id                 : int
+    content                 : str
+    
+    
+class SUPPORTIVE_INFORMATION(BaseModel):
+    label                   : ClassVar[str] = "Supportive_Information"
+    si_id                   : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    si_title                : str  
+    module_id               : int
+    section_id              : int
+    page_id                 : int
+    content                 : str    
     
     
     
-##########################################################################
-
-
 
 
  
     
 
-    
-class SUPPORTIVE_INFORMATION(BaseModel):
-    label                   : ClassVar[str] = "Supportive_Information"
-    si_id                   : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
-    course_id               : int 
-    si_title                : str
-    
-class PROCEDURAL_INFORMATION(BaseModel):
-    label                   : ClassVar[str] = "Procedural_Information"
-    pi_id                   : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
-    course_id               : int 
-    pi_title                : str
 
-class PART_TASK_PRACTICE(BaseModel):
-    label                   : ClassVar[str] = "Part_Task_Practice"
-    practice_id             : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
-    practice_title          : str     
+    
+
+
+
     
 
     

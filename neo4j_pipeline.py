@@ -18,11 +18,11 @@ NODE_PIPELINE = [
      ("KNOWLEDGE",              tf.KnowledgeTransformer),
      ("LEARNING_SESSION",       tf.LearningSessionTransformer),
      ("LEARNING_TASK",          tf.TaskTransformer),
-    # ("PART_TASK_PRACTICE",     tf.PracticeTransformer),
-    # ("PROCEDURAL_INFORMATION", tf.ProceduralTransformer),
+     ("PART_TASK_PRACTICE",     tf.PracticeTransformer),
+     ("PROCEDURAL_INFORMATION", tf.ProceduralTransformer),
      ("SKILL",                  tf.SkillTransformer),
      ("STUDENT",                tf.StudentTransformer),
-    # ("SUPPORTIVE_INFORMATION", tf.SupportiveTransformer),
+     ("SUPPORTIVE_INFORMATION", tf.SupportiveTransformer),
      ("TASK_CLASS",             tf.TaskClassTransformer)
 ]
 

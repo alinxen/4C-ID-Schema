@@ -7,12 +7,12 @@ from src.config import (
     COMPETENCE_CSV_PATH,
     SKILLS_CSV_PATH,
     KNOWLEDGE_CSV_PATH,
-    COURSE_CSV_PATH,
     HVP_CSV_PATH,
     LOGFILE_CSV_PATH,
-    PAGES_CSV_PATH,
     TASK_CSV_PATH,
-    CLASSES_CSV_PATH
+    CLASSES_CSV_PATH,
+    PTP_CSV_PATH,
+    INFORMATION_CSV_PATH 
 )
 
 
@@ -196,50 +196,35 @@ class TaskClassTransformer(NodeTransformer):
         return pd.DataFrame(task_classes)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-###########################################################################
-
-
-
-
-                
-
 class PracticeTransformer(NodeTransformer):
     """Extracts practice entries, dropping any with missing IDs."""
     DATA = {
-        "practice": (COURSE_CSV_PATH, ['practice_title', 'practice_id'])
+        "practice": (PTP_CSV_PATH, ['practice_title', 'practice_id', 'module_id', 'subtasks', 'question_text', 'correct_answer', 'max_points' ])
     }
     
     def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
         df = extracted_data["practice"].copy()
-        df = df.dropna(subset=['practice_id'])
         return df
-        
-        
 
 
-
-
+class ProceduralTransformer(NodeTransformer):
+    """
+    Extracts procedural information from Moodle pages and maps them 
+    to the internal PI IDs defined in the course blueprint.
+    """
+    DATA = {
+        "pages":   (INFORMATION_CSV_PATH,  ['module_id', 'section_id', 'type', 'title', 'page_id', 'content'])
+    }
     
+    def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
+        df = extracted_data["pages"].copy()
+        pages = df[df['type'] == 'page']
+        pages = pages.reset_index(drop=True)
+        pages = pages.rename(columns={'title': 'pi_title'})
+        pages['pi_id'] = "PI" + (pages.index + 1).astype(str)
+        
+        return pages
+
 
 class SupportiveTransformer(NodeTransformer):
     """
@@ -247,67 +232,19 @@ class SupportiveTransformer(NodeTransformer):
     to the internal SI IDs defined in the course blueprint.
     """
     DATA = {
-        "pages":   (PAGES_CSV_PATH,  ['id', 'course', 'name']),
-        "mapping": (COURSE_CSV_PATH, ['si_id', 'supportive_title'])
-    }
-                 
-    def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
-        pages = extracted_data["pages"].copy()
-        pages = pages.rename(columns={'id': 'moodle_id', 'course': 'course_id', 'name': 'si_title'})
-        pages['moodle_id'] = pages['moodle_id'].astype(str)
-        
-        mapping = extracted_data["mapping"].copy()
-        
-        # Drop empty rows and ensure ID is string
-        mapping = mapping.dropna(subset=['supportive_title', 'si_id'])
-        title_to_id_map = mapping.set_index('supportive_title')['si_id'].astype(str).to_dict()
-        
-        # Filter for Supportive Information (SI) entries only
-        pages_supportive = pages[pages['si_title'].str.startswith("(SI)", na=False)].copy()
-        
-        # Perform ID Mapping (fallback to original Moodle ID if not found)
-        pages_supportive['si_id'] = (
-            pages_supportive['si_title']
-            .map(title_to_id_map)
-            .fillna(pages_supportive['moodle_id'].astype(str))
-        )
-        
-        pages_supportive.reset_index(drop=True, inplace=True)
-        return pages_supportive
-    
-    
-class ProceduralTransformer(NodeTransformer):
-    """
-    Extracts procedural information from Moodle pages and maps them 
-    to the internal PI IDs defined in the course blueprint.
-    """
-    DATA = {
-        "pages":   (PAGES_CSV_PATH,  ['id', 'course', 'name']),
-        "mapping": (COURSE_CSV_PATH, ['pi_id', 'procedural_title'])
+        "pages":   (INFORMATION_CSV_PATH,  ['module_id', 'section_id', 'type', 'title', 'page_id', 'content'])
     }
     
     def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
-        pages = extracted_data["pages"].copy()
-        pages = pages.rename(columns={'id': 'moodle_id', 'course': 'course_id', 'name': 'pi_title'})
-        pages['moodle_id'] = pages['moodle_id'].astype(str)
+        df = extracted_data["pages"].copy()
+        pages = df[df['type'] == 'longpage']
+        pages = pages.reset_index(drop=True)
+        pages = pages.rename(columns={'title': 'si_title'})
+        pages['si_id'] = "SI" + (pages.index + 1).astype(str)
         
-        mapping = extracted_data["mapping"].copy()
-        
-        # Drop empty rows and ensure ID is string
-        mapping = mapping.dropna(subset=['procedural_title', 'pi_id'])
-        title_to_id_map = mapping.set_index('procedural_title')['pi_id'].astype(str).to_dict()
-        
-        # Filter for Procedural Information (PI) entries only
-        pages_procedural = pages[pages['pi_title'].str.startswith("(PI)", na=False)].copy()
-        
-        # Perform ID Mapping (fallback to original Moodle ID if not found)
-        pages_procedural['pi_id'] = (
-            pages_procedural['pi_title']
-            .map(title_to_id_map)
-            .fillna(pages_procedural['moodle_id'].astype(str))
-        )
-        
-        pages_procedural.reset_index(drop=True, inplace=True)
-        return pages_procedural
+        return pages
+    
+    
+
 
  
