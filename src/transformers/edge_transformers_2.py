@@ -221,13 +221,8 @@ class FinishedTransformer:
 class AttemptedTransformer():
     DATA = {
         "logfile": (LOGFILE_CSV_PATH, ['userid', 'eventname', 'other', 'timecreated','objecttable' ,'objectid']),
-        "xapi": (XAPI_CSV_PATH, ['user_id', 'content_id', 'correct_responses_pattern', 'response']),
-        "tasks": (TASK_CSV_PATH, ['grade_item_id', 'task_type']),
-        
-        #"tasks": (TASK_CSV_PATH, ['module_id','task_type']),#,'task_id','task_title','max_points','task_description']), 
-        #"hvp":   (HVP_CSV_PATH, ['name', 'main_library_id']),
-        #"moodle_tasks": (TASK_CSV_PATH, ['id', 'name']),
-        #"blueprint": (COURSE_CSV_PATH, ['task_id', 'task'])
+        "xapi": (XAPI_CSV_PATH, ['user_id', 'content_id', 'correct_responses_pattern', 'response', 'id']),
+        "tasks": (TASK_CSV_PATH, ['grade_item_id', 'task_type', 'content_id', 'task_id']),
     }
             
     def _fetch_data(self, extracted_data):
@@ -241,20 +236,33 @@ class AttemptedTransformer():
         # Filter out admins
         logfile = logfile[~logfile['userid'].isin(EXCLUDED_USER_IDS)].copy()
 
-        return logfile, extracted_data["xapi"].copy()
+        return logfile, extracted_data["xapi"].copy(), extracted_data["tasks"].copy()
 
-    def _process_standard_attempts(self, standard_df, xapi_df):
+    def _process_standard_attempts(self, standard_df, xapi_df, tasks_df):
         
-        standard_df['is_latest'] = (standard_df.groupby(['userid', 'objectid'])['timecreated'].transform('max') == standard_df['timecreated'])
+        # Identify the latest attempt in the standard grades dataframe
+        standard_df['is_latest'] = (standard_df.groupby(['userid', 'grade_item_id'])['timecreated'].transform('max') == standard_df['timecreated'])
+        standard_df['userid'] = standard_df['userid'].astype(int)
         
-        xapi = xapi_df.rename(columns={'content_id': 'objectid', 'user_id': 'userid'}).astype({'userid': str})
+        # Map the correct grade_item_id onto the xAPI dataframe
+        id_mapping = tasks_df[['content_id', 'grade_item_id']].dropna().drop_duplicates()
+        xapi = xapi_df.rename(columns={'user_id': 'userid'})
+        xapi['userid'] = xapi['userid'].fillna(0).astype(int)
+        xapi = pd.merge(xapi, id_mapping, on='content_id', how='inner')
         
-        attempts = pd.merge(standard_df, xapi[['userid', 'objectid', 'correct_responses_pattern', 'response']], on=['userid', 'objectid'], how='left')
+        xapi = xapi.sort_values('id').groupby(['userid', 'grade_item_id']).tail(1)
         
+        # Merge standard attempts with the mapped xAPI data
+        attempts = pd.merge(
+            standard_df, 
+            xapi[['userid', 'grade_item_id', 'correct_responses_pattern', 'response']], 
+            on=['userid', 'grade_item_id'], 
+            how='left'
+        )
+        
+        # 5. Clean up non-latest attempts and fill NaNs
         attempts.loc[~attempts['is_latest'], ['correct_responses_pattern', 'response']] = None
-        
         attempts.fillna({'correct_responses_pattern': "", 'response': ""}, inplace=True)
-        
         attempts.drop(columns=['is_latest'], inplace=True)
         
         return attempts
@@ -284,7 +292,7 @@ class AttemptedTransformer():
 
     def execute(self, extracted_data):
         
-        logfile_df, xapi_df = self._fetch_data(extracted_data)
+        logfile_df, xapi_df, tasks_df = self._fetch_data(extracted_data)
                 
         # Extract objectid and results from the 'other' column
         graded_events = parse_graded_events(logfile_df)
@@ -297,34 +305,44 @@ class AttemptedTransformer():
         hotspot_attempts = graded_events[graded_events['grade_item_id'].isin(hotspot_ids)]
         hotspot_attempts  = self._process_hotspot_attempts(hotspot_attempts)
         
-        
-        ####################### CONTINUE HERE !!!!
-        
-        
         # Standard Attempts
         standard_attempts = graded_events[~graded_events['grade_item_id'].isin(hotspot_ids)]
-        standard_attempts = self._process_standard_attempts(standard_attempts, xapi_df)
+        standard_attempts = self._process_standard_attempts(standard_attempts, xapi_df, tasks_df)
         
-        
-        
-        print(standard_attempts)
-        hotspot_attempts.to_csv('output.csv', index=False)
-
+        # Summarize Attempts
         all_attempts = pd.concat([standard_attempts, hotspot_attempts], ignore_index=True)
-        task_prefix_map = self._create_task_map(extracted_data)
         
         all_attempts['score'] = all_attempts['result'].astype(float).round(1)
         all_attempts['passed'] = all_attempts['score'] >= 8.0
-        all_attempts['student_response'] = all_attempts['response'].astype(str)
-        all_attempts['correct_response'] = all_attempts['correct_responses_pattern'].astype(str)
-        all_attempts['task_id'] = all_attempts['objectid'].astype(int).map(lambda x: task_prefix_map.get(x, "LT"))
-        all_attempts['student_id'] = all_attempts['userid'].astype(str)
-        all_attempts['timestamp'] = all_attempts['timecreated'].apply(lambda x: x.isoformat())
+        all_attempts['timestamp_str'] = all_attempts['timecreated'].apply(lambda x: x.isoformat())
         
-        all_attempts['attempted_id'] = "r_at_" + all_attempts['student_id'] + "_" + all_attempts['task_id'] + "_" + all_attempts['timestamp']
-        
+        # Map the hvp items to the learning tasks 
+        task_id_mapping = tasks_df.set_index('grade_item_id')['task_id'].to_dict()
+        all_attempts['task_mapped'] = all_attempts['grade_item_id'].fillna(0).astype(int).map(lambda x: task_id_mapping.get(x, "LT"))
+               
+        # Clear out recovered responses if applicable
         if 'is_recovered' in all_attempts.columns:
-            all_attempts.loc[all_attempts['is_recovered'] == True, 'student_response'] = ""
-        
-        columns_to_keep = ['attempted_id', 'timestamp', 'score', 'passed', 'student_response', 'correct_response', 'task_id', 'student_id']
-        return all_attempts[columns_to_keep]
+            all_attempts.loc[all_attempts['is_recovered'] == True, 'response'] = ""
+
+        # 2. Format output into the final list of dictionaries
+        attempted_records = []
+        for row in all_attempts.itertuples():
+                        
+            # Ensure text fields are string and handle potential NaNs safely
+            student_resp = str(row.response) if pd.notna(row.response) else ""
+            correct_resp = str(row.correct_responses_pattern) if pd.notna(row.correct_responses_pattern) else ""
+            
+            attempted_records.append({
+                "attempted_id": f"r_at_{row.userid}_{row.grade_item_id}",
+                "timestamp": row.timestamp_str,
+                "score": row.score,
+                "passed": row.passed,
+                "student_response": student_resp,
+                "correct_response": correct_resp,
+                "target_id": row.task_mapped,
+                "source_id": row.userid
+            })
+            
+
+            
+        return pd.DataFrame(attempted_records)

@@ -12,6 +12,7 @@ TASK_CSV_PATH           = os.path.join(DATA_DIR,  "a_lernaufgaben.csv")
 TARGET_CSV_PATH         = os.path.join(DATA_DIR,  "a_lernziele.csv")
 LOGFILE_CSV_PATH        = os.path.join(DATA_DIR,  "m_logstore_standard_log.csv")
 XAPI_CSV_PATH           = os.path.join(DATA_DIR,  "m_hvp_xapi_results.csv")
+CLASSES_CSV_PATH        = os.path.join(DATA_DIR,  "a_task_class.csv")
 
 
 PAGES_CSV_PATH          = os.path.join(DATA_DIR,  "m_page.csv")

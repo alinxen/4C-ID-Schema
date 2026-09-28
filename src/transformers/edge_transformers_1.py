@@ -8,7 +8,8 @@ from src.config import (
     KNOWLEDGE_CSV_PATH,
     COURSE_CSV_PATH,
     COMPETENCE_CSV_PATH,
-    TASK_CSV_PATH
+    TASK_CSV_PATH,
+    CLASSES_CSV_PATH
 )
 
 # ---------------------------------------------------------
@@ -126,18 +127,31 @@ class AppliesTransformer():
         df['applies_id'] = "apl_" + (df.index + 1).astype(str)
         return df
 
-
-#################################################
-
 class GroupsTransformer(EdgeTransformer):
     DATA = {
-        "groups": (COURSE_CSV_PATH, ['task_id', 'task_class_id'])
+        "groups": (CLASSES_CSV_PATH, ['task_class_bool', 'id','task_sequence'])
     }
   
     def execute(self, extracted_data):
         df = extracted_data["groups"].copy()
-        df['groups_id'] = [f"g_{i}" for i in range(1, len(df) + 1)]
-        return df 
+        filtered_df = df[df['task_class_bool'].astype(int) == 1].copy()
+        filtered_df = filtered_df.dropna(subset=['task_sequence'])
+        filtered_df['target_id'] = filtered_df['task_sequence'].str.split(',')
+        edges_df = filtered_df.explode('target_id')
+        edges_df['target_id'] = edges_df['target_id'].str.strip()
+        edges_df = edges_df.rename(columns={'id': 'source_id'})
+        result_df = edges_df[['source_id', 'target_id','task_sequence']].reset_index(drop=True)
+        result_df['groups_id'] = [f"g_{i}" for i in range(1, len(result_df) + 1)]
+        return result_df
+    
+    
+    
+    
+    
+    
+#################################################
+
+
 
 
 class ProvidesTransformer(EdgeTransformer):

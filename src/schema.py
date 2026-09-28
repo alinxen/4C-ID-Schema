@@ -59,16 +59,22 @@ class LEARNING_SESSION(BaseModel):
     student_id              : int
     total_actions           : int
     
+class TASK_CLASS(BaseModel):
+    label                   : ClassVar[str] = "Task_Class"
+    task_class_id           : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    task_class              : str  
+    section_id              : int
+    class_description       : str
+
+    
+    
     
 ##########################################################################
 
 
 
 
-class TASK_CLASS(BaseModel):
-    label                   : ClassVar[str] = "Task_Class"
-    task_class_id           : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
-    task_class              : str     
+ 
     
 
     
@@ -141,6 +147,14 @@ class APPLIES_KNOWLEDGE(BaseModel):
     knowledge_id            : str = Field(..., validation_alias="target_id")
     knowledge_dimension     : str    
     
+class GROUPS(BaseModel):
+    label                   : ClassVar[str] = "GROUPS"
+    source_label            : ClassVar[str] = "Task_Class"
+    target_label            : ClassVar[str] = "Learning_Task"
+    groups_id               : str
+    task_sequence           : str
+    task_class_id           : str = Field(..., validation_alias="source_id")
+    task_id                 : str = Field(..., validation_alias="target_id")  
     
 ###############################################################################
     
@@ -166,7 +180,7 @@ class ATTEMPTED(BaseModel):
     student_response        : str 
     correct_response        : str
     task_id                 : str = Field(..., validation_alias="target_id")
-    student_id              : str = Field(..., validation_alias="source_id")
+    student_id              : int = Field(..., validation_alias="source_id")
     
     
     
@@ -181,16 +195,7 @@ class ATTEMPTED(BaseModel):
     
  
     
-class GROUPS(BaseModel):
-    label                   : ClassVar[str] = "GROUPS"
-    label_id                : ClassVar[str] = "groups_id"
-    source_label            : ClassVar[str] = "Task_Class"
-    source_id_field         : ClassVar[str] = "task_class_id"
-    target_label            : ClassVar[str] = "Learning_Task"
-    target_id_field         : ClassVar[str] = "task_id"
-    groups_id               : str
-    task_class_id           : str
-    task_id                 : str        
+     
     
 class PROVIDES(BaseModel):
     label                   : ClassVar[str] = "PROVIDES"

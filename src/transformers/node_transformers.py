@@ -1,4 +1,3 @@
-from datetime import timedelta
 from typing import Dict, Any
 
 import pandas as pd
@@ -12,7 +11,8 @@ from src.config import (
     HVP_CSV_PATH,
     LOGFILE_CSV_PATH,
     PAGES_CSV_PATH,
-    TASK_CSV_PATH
+    TASK_CSV_PATH,
+    CLASSES_CSV_PATH
 )
 
 
@@ -174,8 +174,26 @@ class LearningSessionTransformer(NodeTransformer):
             
         return learning_sessions
     
+class TaskClassTransformer(NodeTransformer):
+    """Extracts task class definitions from the course data."""
+    DATA = {
+        "taskclass": (CLASSES_CSV_PATH, ['section_id','task_class_bool','id','name','description'])
+    }
 
+    def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
+        df = extracted_data["taskclass"].copy()
+        filtered_df = df[df['task_class_bool'].astype(int) == 1]
 
+        task_classes = []
+        for row in filtered_df.itertuples(index=False):
+            task_classes.append({
+                "section_id": int(row.section_id),
+                "task_class_id": row.id,
+                "task_class": row.name,
+                "class_description": row.description
+            })
+            
+        return pd.DataFrame(task_classes)
 
 
 
@@ -202,11 +220,7 @@ class LearningSessionTransformer(NodeTransformer):
 
 
 
-class TaskClassTransformer(NodeTransformer):
-    """Extracts task class definitions from the course data."""
-    DATA = {
-        "taskclass": (COURSE_CSV_PATH, ['task_class_id', 'task_class'])
-    }
+
                 
 
 class PracticeTransformer(NodeTransformer):
