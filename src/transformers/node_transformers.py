@@ -213,15 +213,14 @@ class ProceduralTransformer(NodeTransformer):
     to the internal PI IDs defined in the course blueprint.
     """
     DATA = {
-        "pages":   (INFORMATION_CSV_PATH,  ['module_id', 'section_id', 'type', 'title', 'page_id', 'content'])
+        "pages":   (INFORMATION_CSV_PATH,  ['module_id', 'section_id', 'type', 'title', 'page_id', 'content','id'])
     }
     
     def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
         df = extracted_data["pages"].copy()
         pages = df[df['type'] == 'page']
         pages = pages.reset_index(drop=True)
-        pages = pages.rename(columns={'title': 'pi_title'})
-        pages['pi_id'] = "PI" + (pages.index + 1).astype(str)
+        pages = pages.rename(columns={'title': 'pi_title','id': 'pi_id'})
         
         return pages
 
@@ -232,15 +231,15 @@ class SupportiveTransformer(NodeTransformer):
     to the internal SI IDs defined in the course blueprint.
     """
     DATA = {
-        "pages":   (INFORMATION_CSV_PATH,  ['module_id', 'section_id', 'type', 'title', 'page_id', 'content'])
+        "pages":   (INFORMATION_CSV_PATH,  ['module_id', 'section_id', 'type', 'title', 'page_id', 'content','id'])
     }
     
     def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
         df = extracted_data["pages"].copy()
         pages = df[df['type'] == 'longpage']
         pages = pages.reset_index(drop=True)
-        pages = pages.rename(columns={'title': 'si_title'})
-        pages['si_id'] = "SI" + (pages.index + 1).astype(str)
+        pages = pages.rename(columns={'title': 'si_title','id':'si_id'})
+        
         
         return pages
     

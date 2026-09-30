@@ -168,6 +168,31 @@ class GROUPS(BaseModel):
     task_sequence           : str
     task_class_id           : str = Field(..., validation_alias="source_id")
     task_id                 : str = Field(..., validation_alias="target_id")  
+
+class INCLUDES(BaseModel):
+    label                   : ClassVar[str] = "INCLUDES"
+    source_label            : ClassVar[str] = "Task_Class"
+    target_label            : ClassVar[str] = "Part_Task_Practice"
+    includes_id             : str
+    task_class_id           : str = Field(..., validation_alias="source_id")
+    practice_id             : str = Field(..., validation_alias="target_id") 
+
+
+class PROVIDES(BaseModel):
+    label                   : ClassVar[str] = "PROVIDES"
+    source_label            : ClassVar[str] = "Task_Class"
+    target_label            : ClassVar[str] = "Supportive_Information"
+    provides_id             : str
+    task_class_id           : str = Field(..., validation_alias="source_id")
+    si_id                   : str = Field(..., validation_alias="target_id")       
+
+class OFFERS(BaseModel):
+    label                   : ClassVar[str] = "OFFERS"
+    source_label            : ClassVar[str] = "Task_Class"
+    target_label            : ClassVar[str] = "Procedural_Information"
+    offers_id               : str
+    task_class_id           : str = Field(..., validation_alias="source_id")
+    pi_id                   : str = Field(..., validation_alias="target_id")    
     
 ###############################################################################
     
@@ -210,38 +235,9 @@ class ATTEMPTED(BaseModel):
     
      
     
-class PROVIDES(BaseModel):
-    label                   : ClassVar[str] = "PROVIDES"
-    label_id                : ClassVar[str] = "provides_id"
-    source_label            : ClassVar[str] = "Task_Class"
-    source_id_field         : ClassVar[str] = "task_class_id"
-    target_label            : ClassVar[str] = "Supportive_Information"
-    target_id_field         : ClassVar[str] = "si_id"
-    provides_id             : str
-    task_class_id           : str
-    si_id                   : str        
 
-class OFFERS(BaseModel):
-    label                   : ClassVar[str] = "OFFERS"
-    label_id                : ClassVar[str] = "offers_id"
-    source_label            : ClassVar[str] = "Task_Class"
-    source_id_field         : ClassVar[str] = "task_class_id"
-    target_label            : ClassVar[str] = "Procedural_Information"
-    target_id_field         : ClassVar[str] = "pi_id"
-    offers_id               : str
-    task_class_id           : str
-    pi_id                   : str    
 
-class INCLUDES(BaseModel):
-    label                   : ClassVar[str] = "INCLUDES"
-    label_id                : ClassVar[str] = "includes_id"
-    source_label            : ClassVar[str] = "Task_Class"
-    source_id_field         : ClassVar[str] = "task_class_id"
-    target_label            : ClassVar[str] = "Part_Task_Practice"
-    target_id_field         : ClassVar[str] = "practice_id"
-    includes_id             : str
-    task_class_id           : str
-    practice_id             : str    
+ 
 
 class TACKLED(BaseModel):
     label                   : ClassVar[str] = "TACKLED"

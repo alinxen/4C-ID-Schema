@@ -9,7 +9,9 @@ from src.config import (
     COURSE_CSV_PATH,
     COMPETENCE_CSV_PATH,
     TASK_CSV_PATH,
-    CLASSES_CSV_PATH
+    CLASSES_CSV_PATH,
+    PTP_CSV_PATH,
+    INFORMATION_CSV_PATH
 )
 
 # ---------------------------------------------------------
@@ -144,48 +146,64 @@ class GroupsTransformer(EdgeTransformer):
         result_df['groups_id'] = [f"g_{i}" for i in range(1, len(result_df) + 1)]
         return result_df
     
-    
-    
-    
-    
-    
-#################################################
-
-
-
-
-class ProvidesTransformer(EdgeTransformer):
+class IncludesTransformer(EdgeTransformer):
     DATA = {
-        "provides": (COURSE_CSV_PATH, ['si_id', 'task_class_id'])
+        "includes": (PTP_CSV_PATH, ['task_class_id', 'practice_id'])
     }
 
     def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
-        df = extracted_data["provides"].copy()
+        df = (extracted_data["includes"]
+              .copy()
+              .rename(columns={'task_class_id': 'source_id', 'practice_id': 'target_id'})
+              )
+        df = df.dropna(subset=['target_id']).reset_index(drop=True)
+        df['includes_id'] = [f"i_{i}" for i in range(1, len(df) + 1)]
+        return df
+    
+class ProvidesTransformer(EdgeTransformer):
+    DATA = {
+        "provides": (INFORMATION_CSV_PATH, ['id', 'task_class_id','type'])
+    }
+
+    def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
+        df = (extracted_data["provides"]
+              .copy()
+              .rename(columns={'task_class_id': 'source_id', 'id': 'target_id'})
+              )
+        df = df[df['type'] == 'longpage']
+        df = df.dropna(subset=['target_id']).reset_index(drop=True)
+        df['source_id'] = df['source_id'].str.split(',')
+        df = df.explode('source_id')
+        df['source_id'] = df['source_id'].str.strip()
+        df = df.dropna(subset=['source_id']).reset_index(drop=True)
         df['provides_id'] = [f"p_{i}" for i in range(1, len(df) + 1)]
         return df
 
 
 class OffersTransformer(EdgeTransformer):
     DATA = {
-        "offers": (COURSE_CSV_PATH, ['pi_id', 'task_class_id'])
+        "offers": (INFORMATION_CSV_PATH, ['id', 'task_class_id','type'])
     }
 
     def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
-        df = extracted_data["offers"].copy()
+        df = (extracted_data["offers"]
+              .copy()
+              .rename(columns={'task_class_id': 'source_id', 'id': 'target_id'})
+              )
+        df = df[df['type'] == 'page']
+        df = df.dropna(subset=['target_id']).reset_index(drop=True)
         df['offers_id'] = [f"o_{i}" for i in range(1, len(df) + 1)]
         return df
+    
+#################################################
 
 
-class IncludesTransformer(EdgeTransformer):
-    DATA = {
-        "includes": (COURSE_CSV_PATH, ['task_class_id', 'practice_id'])
-    }
 
-    def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
-        df = extracted_data["includes"].copy()
-        df = df.dropna(subset=['practice_id']).reset_index(drop=True)
-        df['includes_id'] = [f"i_{i}" for i in range(1, len(df) + 1)]
-        return df
+
+
+
+
+
 
 
 class CuesTransformer(EdgeTransformer):
