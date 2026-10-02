@@ -95,7 +95,7 @@ class SUPPORTIVE_INFORMATION(BaseModel):
     page_id                 : int
     content                 : str    
     
-    
+
     
 
 
@@ -194,6 +194,31 @@ class OFFERS(BaseModel):
     task_class_id           : str = Field(..., validation_alias="source_id")
     pi_id                   : str = Field(..., validation_alias="target_id")    
     
+class TRAINS(BaseModel):
+    label                   : ClassVar[str] = "TRAINS"
+    source_label            : ClassVar[str] = "Part_Task_Practice"
+    target_label            : ClassVar[str] = "Procedural_Information"
+    trains_id               : str
+    pi_id                   : str  = Field(..., validation_alias="target_id") 
+    practice_id             : str  = Field(..., validation_alias="source_id")
+    
+class CUES(BaseModel):
+    label                   : ClassVar[str] = "CUES"
+    source_label            : ClassVar[str] = "Learning_Task"
+    target_label            : ClassVar[str] = "Procedural_Information"
+    cues_id                 : str
+    task_id                 : str = Field(..., validation_alias="source_id")
+    pi_id                   : str = Field(..., validation_alias="target_id")  
+    
+class REFERENCES(BaseModel):
+    label                   : ClassVar[str] = "REFERENCES"
+    source_label            : ClassVar[str] = "Learning_Task"
+    target_label            : ClassVar[str] = "Supportive_Information"
+    references_id           : str
+    task_id                 : str = Field(..., validation_alias="source_id")
+    si_id                   : str = Field(..., validation_alias="target_id")  
+    
+    
 ###############################################################################
     
     
@@ -221,19 +246,6 @@ class ATTEMPTED(BaseModel):
     student_id              : int = Field(..., validation_alias="source_id")
     
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
- 
-    
-     
     
 
 
@@ -311,37 +323,10 @@ class FINISHED(BaseModel):
     completion_type         : str
     score                   : str
  
-class CUES(BaseModel):
-    label                   : ClassVar[str] = "CUES"
-    label_id                : ClassVar[str] = "cues_id"
-    source_label            : ClassVar[str] = "Learning_Task"
-    source_id_field         : ClassVar[str] = "task_id"
-    target_label            : ClassVar[str] = "Procedural_Information"
-    target_id_field         : ClassVar[str] = "pi_id"
-    cues_id                 : str
-    task_id                 : str
-    pi_id                   : str
+
     
-class REFERENCES(BaseModel):
-    label                   : ClassVar[str] = "REFERENCES"
-    label_id                : ClassVar[str] = "references_id"
-    source_label            : ClassVar[str] = "Learning_Task"
-    source_id_field         : ClassVar[str] = "task_id"
-    target_label            : ClassVar[str] = "Supportive_Information"
-    target_id_field         : ClassVar[str] = "si_id"
-    references_id           : str
-    task_id                 : str
-    si_id                   : str
+
     
-class TRAINS(BaseModel):
-    label                   : ClassVar[str] = "TRAINS"
-    label_id                : ClassVar[str] = "trains_id"
-    source_label            : ClassVar[str] = "Part_Task_Practice"
-    source_id_field         : ClassVar[str] = "practice_id"
-    target_label            : ClassVar[str] = "Procedural_Information"
-    target_id_field         : ClassVar[str] = "pi_id"
-    trains_id               : str
-    pi_id                   : str
-    practice_id             : str
+
  
     

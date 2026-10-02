@@ -6,9 +6,6 @@ from src.config import (
     TARGET_CSV_PATH,
     SKILLS_CSV_PATH,
     KNOWLEDGE_CSV_PATH,
-    COURSE_CSV_PATH,
-    COMPETENCE_CSV_PATH,
-    TASK_CSV_PATH,
     CLASSES_CSV_PATH,
     PTP_CSV_PATH,
     INFORMATION_CSV_PATH
@@ -195,51 +192,66 @@ class OffersTransformer(EdgeTransformer):
         df['offers_id'] = [f"o_{i}" for i in range(1, len(df) + 1)]
         return df
     
-#################################################
+    
+class TrainsTransformer(EdgeTransformer):
+    DATA = {
+        "trains": (PTP_CSV_PATH, ['practice_id', 'pi_id'])
+    }
 
-
-
-
-
-
-
-
-
-
+    def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
+        df = (extracted_data["trains"]
+              .copy()
+              .rename(columns={'practice_id': 'source_id', 'pi_id': 'target_id'})
+              )
+        df = df.dropna(subset=['target_id']).reset_index(drop=True)
+        df['trains_id'] = [f"tra_{i}" for i in range(1, len(df) + 1)]
+        return df
+    
+    
 class CuesTransformer(EdgeTransformer):
     DATA = {
-        "cues": (COURSE_CSV_PATH, ['task_id', 'pi_id'])
+        "cues": (INFORMATION_CSV_PATH, ['type', 'id'])
     }
 
     def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
-        df = extracted_data["cues"].copy()
-        df = df.dropna(subset=['pi_id']).reset_index(drop=True)
+        df = (extracted_data["cues"]
+              .copy()
+              .rename(columns={'id': 'target_id'})
+              )
+        df = df[df['type'] == 'page']
+        df['source_id'] = df['target_id'].str.split('-').str[1]
+        df = df.dropna(subset=['target_id']).reset_index(drop=True)
         df['cues_id'] = [f"cue_{i}" for i in range(1, len(df) + 1)]
         return df
-
-
+    
 class ReferencesTransformer(EdgeTransformer):
     DATA = {
-        "references": (COURSE_CSV_PATH, ['task_id', 'si_id'])
+        "references": (INFORMATION_CSV_PATH, ['type', 'id'])
     }
 
     def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
-        df = extracted_data["references"].copy()
-        df = df.dropna(subset=['si_id']).reset_index(drop=True)
+        df = (extracted_data["references"]
+              .copy()
+              .rename(columns={'id': 'target_id'})
+              )
+        df = df[df['type'] == 'longpage']
+        df = df.dropna(subset=['target_id']).reset_index(drop=True)
+        
+        source_mapping = {
+            'SI-IV': ['A1', 'D1', 'E1', 'F1'],
+            'SI-VIS': ['A2', 'D2', 'E2','F2'],       # Example values, replace with your actual ones
+            'SI-VAL': ['A3', 'D3'],             
+            'SI-FW': ['E3','F3'],                    
+            'SI-AUS': ['A4', 'D4', 'E4', 'F4'],
+            'SI-STAT': ['A5', 'D5', 'E5', 'F5']
+        }
+        df['source_id'] = df['target_id'].map(source_mapping)
+        df = df.explode('source_id').reset_index(drop=True)
         df['references_id'] = [f"ref_{i}" for i in range(1, len(df) + 1)]
         return df
 
 
-class TrainsTransformer(EdgeTransformer):
-    DATA = {
-        "trains": (COURSE_CSV_PATH, ['practice_id', 'pi_id'])
-    }
 
-    def execute(self, extracted_data: Dict[str, Any]) -> pd.DataFrame:
-        df = extracted_data["trains"].copy()
-        df = df.dropna(subset=['practice_id']).reset_index(drop=True)
-        df['trains_id'] = [f"tra_{i}" for i in range(1, len(df) + 1)]
-        return df
     
     
 
