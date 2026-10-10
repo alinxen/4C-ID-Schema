@@ -29,9 +29,7 @@ class KNOWLEDGE(BaseModel):
     knowledge_title         : str 
     knowledge_description   : str
     knowledge_group_id      : str 
-    knowledge_group_title   : str
-    
-    
+    knowledge_group_title   : str 
     
 class LEARNING_TASK(BaseModel):
     label                   : ClassVar[str] = "Learning_Task"
@@ -45,7 +43,7 @@ class LEARNING_TASK(BaseModel):
 
 class STUDENT(BaseModel):
     label                   : ClassVar[str] = "Student"
-    student_id              : int  = Field(..., json_schema_extra={"is_unique_neo4j": True})
+    student_id              : str  = Field(..., json_schema_extra={"is_unique_neo4j": True})
     crud                    : str
     edulevels               : str
     total_events            : int
@@ -56,7 +54,7 @@ class LEARNING_SESSION(BaseModel):
     session_id              : str = Field(..., json_schema_extra={"is_unique_neo4j": True})
     start_time              : datetime
     end_time                : datetime
-    student_id              : int
+    student_id              : str
     total_actions           : int
     
 class TASK_CLASS(BaseModel):
@@ -94,23 +92,6 @@ class SUPPORTIVE_INFORMATION(BaseModel):
     section_id              : int
     page_id                 : int
     content                 : str    
-    
-
-    
-
-
- 
-    
-
-
-    
-
-
-
-    
-
-    
-
         
 # -------------------------------------------------
 # EDGES of the 4C/ID-SCHEMA
@@ -176,7 +157,6 @@ class INCLUDES(BaseModel):
     includes_id             : str
     task_class_id           : str = Field(..., validation_alias="source_id")
     practice_id             : str = Field(..., validation_alias="target_id") 
-
 
 class PROVIDES(BaseModel):
     label                   : ClassVar[str] = "PROVIDES"

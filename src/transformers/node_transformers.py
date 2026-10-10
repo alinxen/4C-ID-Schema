@@ -141,6 +141,7 @@ class LearningSessionTransformer(NodeTransformer):
         using vectorized Pandas operations.
         """
         # Calculate time gaps and session boundaries
+        df = df.sort_values(['userid', 'timecreated']).copy()
         df['time_gap'] = df.groupby('userid')['timecreated'].diff()
         is_new_session = df['time_gap'] > pd.Timedelta(minutes=30)
         is_first_event = df['time_gap'].isna()
@@ -154,7 +155,7 @@ class LearningSessionTransformer(NodeTransformer):
         ).reset_index()
         
         # Drop sessions where the student only clicked once
-        sessions_df = sessions_df[sessions_df['start_time'] != sessions_df['end_time']].copy()
+        sessions_df = sessions_df[sessions_df['start_time'] != sessions_df['end_time']].copy().reset_index(drop=True)
         
         # Alternative: Handle "single-click" sessions (where start == end) by adding a 2-minute buffer
         #single_event_mask = sessions_df['start_time'] == sessions_df['end_time']
@@ -165,7 +166,7 @@ class LearningSessionTransformer(NodeTransformer):
         learning_sessions = []
         for row in sessions_df.itertuples():
             learning_sessions.append({
-                "session_id": f"session_{row.session_idx}",
+                "session_id": f"session_{row.Index + 1}",
                 "student_id": row.userid,
                 "start_time": row.start_time, 
                 "end_time":   row.end_time,
