@@ -5,12 +5,9 @@ from src.config import (
     EXCLUDED_USER_IDS,
     GRADE_GRADES_CSV_PATH, 
     COMPLETED_CSV_PATH, 
-    COURSE_MODULE_CSV_PATH, 
     TASK_CSV_PATH, 
-    COURSE_CSV_PATH, 
     LOGFILE_CSV_PATH, 
-    XAPI_CSV_PATH, 
-    HVP_CSV_PATH
+    XAPI_CSV_PATH
     )
 
 # =====================================================================
@@ -83,135 +80,122 @@ class FinishedTransformer:
     DATA = {
         "grades": (GRADE_GRADES_CSV_PATH, ['userid', 'itemid', 'rawgrade', 'finalgrade', 'timemodified']),
         "completions": (COMPLETED_CSV_PATH, ['userid', 'coursemoduleid', 'completionstate', 'timemodified']),
-        "modules": (COURSE_MODULE_CSV_PATH, ['id', 'module', 'instance']),
-        "moodle_tasks": (TASK_CSV_PATH, ['id', 'name']),
-        "blueprint": (COURSE_CSV_PATH, ['task_id', 'task']),
-        # Added these so Finished can autonomously calculate Hotspots:
-        "logfile": (LOGFILE_CSV_PATH, ['userid', 'eventname', 'other', 'timecreated', 'objectid']),
-        "libs": (HVP_CSV_PATH,  ['id', 'title']),
-        "tasks": (TASK_CSV_PATH, ['id', 'main_library_id'])
+        "tasks": (TASK_CSV_PATH, ['module_id', 'content_id','task_id','grade_item_id','task_type']),
+        "logfile": (LOGFILE_CSV_PATH, ['userid', 'eventname', 'other', 'timecreated', 'objectid'])
     }
-
-    # Notice attempted_df is gone. It is now 100% independent!
-    def execute(self, extracted_data):
-        df_attempts = self._get_attempt_completions(extracted_data)
-        df_buttons = self._get_button_completions(extracted_data)
-        df_combined = self._combine_completions(df_attempts, df_buttons)
         
-        if df_combined.empty:
-            return self._process_finished_relations(df_combined)
-
-        task_map = self._create_task_map(extracted_data)
-        df_combined['task_id_raw'] = df_combined['task_id'].astype(int)
-        df_combined['task_id'] = df_combined['task_id_raw'].map(lambda x: task_map.get(x, "LT"))
-
-        # Autonomously fix hotspots using the shared utilities
-        df_combined = self._fix_hotspot_scores(df_combined, extracted_data, task_map)
-            
-        finished_df = self._process_finished_relations(df_combined)
-        return finished_df
-
-    def _create_task_map(self, extracted_data):
-        moodle_tasks = extracted_data["moodle_tasks"].copy()
-        blueprint = extracted_data["blueprint"].copy()
-        merged = moodle_tasks.merge(blueprint, left_on='name', right_on='task', how='inner')
-        return merged.set_index('id')['task_id'].to_dict()
-
-    def _get_attempt_completions(self, extracted_data):
-        try:
-            grades = extracted_data["grades"].copy()
-            grades = grades.dropna(subset=['timemodified', 'rawgrade']).copy()
-            grades['task_id'] = (grades['itemid'] - 2).astype(int).astype(str)
-            grades['type'] = 'attempt'
-            grades['score'] = grades['finalgrade'].round(1)
-            grades['completion_time'] = pd.to_datetime(grades['timemodified'], unit='s').dt.strftime('%Y-%m-%dT%H:%M:%S')
-            return grades[['userid', 'task_id', 'completion_time', 'type', 'score']]
-        except FileNotFoundError:
-            return pd.DataFrame()
-
-    def _get_button_completions(self, extracted_data):
-        try:
-            completions = extracted_data["completions"].copy()
-            modules = extracted_data["modules"].copy()
-            completions = completions[completions['completionstate'] == 1]
-            df_merged = completions.merge(modules, how='inner', left_on='coursemoduleid', right_on='id')
-            df_tasks = df_merged[df_merged['module'] == 12].copy()
-            df_tasks['task_id'] = df_tasks['instance'].astype(int).astype(str)
-            df_tasks['type'] = 'button'
-            df_tasks['score'] = None
-            df_tasks['completion_time'] = pd.to_datetime(df_tasks['timemodified'], unit='s').dt.strftime('%Y-%m-%dT%H:%M:%S')
-            return df_tasks[['userid', 'task_id', 'completion_time', 'type', 'score']]
-        except FileNotFoundError:
-            return pd.DataFrame()
-
-    def _combine_completions(self, df_attempts, df_buttons):
+    def execute(self, extracted_data):
+        
+        # Extracts entries from m_grade_grades (Final grade for learning tasks)
+        df_attempts = self._get_attempt_completions(extracted_data)
+        # Extracts entries from m_course_modules_completion (Button in learning tasks)
+        df_buttons  = self._get_button_completions(extracted_data)
+        
+        # Combine DataFrames and only keep "button" if no "attempt" was registered first
         df_combined = pd.concat([df_attempts, df_buttons], ignore_index=True)
-        if df_combined.empty:
-            return df_combined
         df_combined = df_combined.sort_values('type')
         df_combined = df_combined.drop_duplicates(subset=['userid', 'task_id'], keep='first')
-        return df_combined
 
-    def _fix_hotspot_scores(self, df_combined, extracted_data, task_map):
-        """Autonomously fetches the logfile, calculates true scores, and overwrites."""
+        # Fix hotspots using the shared utilities
+        df_combined = self._fix_hotspot_scores(df_combined, extracted_data)
+        
+        # Remove admins
+        df = df_combined.copy()
+        df = df[~df['userid'].isin(EXCLUDED_USER_IDS)]
+
+        
+        # Send away
+        attempted_records = []
+        for row in df.itertuples():
+
+            attempted_records.append({
+                "finished_id": f"r_fin_{row.userid}_{row.task_id}",
+                "source_id": row.userid,
+                "completion_type": row.type,
+                "target_id": row.task_id,
+                "completion_time":row.completion_time,
+                "score": row.score
+            })
+
+            
+        return pd.DataFrame(attempted_records)
+    
+    def _get_attempt_completions(self, extracted_data):
+        grades_raw = extracted_data["grades"].copy()
+        tasks     = extracted_data["tasks"].copy()
+        
+        
+        filtered = grades_raw.dropna(subset=['timemodified', 'rawgrade']).copy()
+        grades = filtered.merge(tasks, how='inner', left_on='itemid', right_on='grade_item_id')
+        grades['type'] = 'attempt'
+        grades['score'] = grades['finalgrade'].round(1)
+        # Convert Unix timestamp to readable datetime and adjust timezone 
+        grades['completion_time'] = (
+        pd.to_datetime(grades['timemodified'], unit='s', utc=True)
+           .dt.tz_convert('Europe/Berlin')
+           .dt.strftime('%Y-%m-%dT%H:%M:%S')
+        )
+        return grades[['userid', 'task_id', 'completion_time', 'type', 'score']]
+
+    def _get_button_completions(self, extracted_data):
+        completions = extracted_data["completions"].copy()
+        modules     = extracted_data["tasks"].copy()
+        
+        completions = completions[completions['completionstate'] == 1]
+        df_button = completions.merge(modules, how='inner', left_on='coursemoduleid', right_on='module_id')
+        df_button['type'] = 'button'
+        df_button['score'] = None
+        df_button['completion_time'] = (
+        pd.to_datetime(df_button['timemodified'], unit='s', utc=True)
+           .dt.tz_convert('Europe/Berlin')
+           .dt.strftime('%Y-%m-%dT%H:%M:%S')
+        )
+        return df_button[['userid', 'task_id', 'completion_time', 'type', 'score']]
+
+    def _fix_hotspot_scores(self, df_combined, extracted_data):
+        """Fetches the logfile, calculates true scores, and overwrites."""
         logfile = extracted_data["logfile"].copy()
-        logfile['timecreated'] = pd.to_datetime(logfile['timecreated'] + 3600, unit='s')
-        logfile['userid'] = pd.to_numeric(logfile['userid'], errors='coerce')
-        logfile = logfile[~logfile['userid'].isin([1, 2])].copy()
+        tasks     = extracted_data["tasks"].copy()
         
-        # Cast to string for safe grouping
-        logfile['userid'] = logfile['userid'].astype(str)
-
-        # Use Shared Utilities
-        hotspot_ids = get_hotspot_task_ids(extracted_data["tasks"], extracted_data["libs"])
-        graded_events = parse_graded_events(logfile)
-        hotspot_attempts = graded_events[graded_events['objectid'].isin(hotspot_ids)].copy()
+        logfile['timecreated'] = pd.to_datetime(logfile['timecreated'], unit='s', utc=True)
+        logfile['timecreated'] = logfile['timecreated'].dt.tz_convert('Europe/Berlin')
+        logfile['timecreated'] = logfile['timecreated'].dt.tz_localize(None)
         
-        true_hotspot_df = calculate_true_hotspot_scores(hotspot_attempts)
+        # Use Shared Functions
+        graded_events    = parse_graded_events(logfile)
+        hotspot_ids      = get_hotspot_task_ids(extracted_data["tasks"])
+        hotspot_attempts = graded_events[graded_events['grade_item_id'].isin(hotspot_ids)].copy()
+        true_hotspot_df  = calculate_true_hotspot_scores(hotspot_attempts)
         
-        if true_hotspot_df.empty:
-            return df_combined
-
         # Get latest score
-        latest_attempts = true_hotspot_df.sort_values('timecreated').groupby(['userid', 'objectid']).last().reset_index()
-        latest_attempts['task_id'] = latest_attempts['objectid'].astype(int).map(lambda x: task_map.get(x, "LT"))
-        
-        # THE FIX: Force both keys to string explicitly to prevent merge crashes
-        df_combined['userid'] = df_combined['userid'].astype(str)
-        latest_attempts['userid'] = latest_attempts['userid'].astype(str)
+        latest_attempts = true_hotspot_df.sort_values('attempt_end_time').groupby(['userid', 'grade_item_id']).last().reset_index()
+        latest_attempts = latest_attempts.merge(tasks, how='inner', left_on='grade_item_id', right_on='grade_item_id')
         
         # Merge onto df_combined
         merged = pd.merge(
             df_combined, 
-            latest_attempts[['userid', 'task_id', 'result']], 
+            latest_attempts[['userid', 'task_id', 'final_grade']], 
             on=['userid', 'task_id'], 
             how='left'
         )
-        
-        merged['score'] = merged['result'].fillna(merged['score'])
-        return merged.drop(columns=['result'])
+                       
+        return merged[['userid', 'task_id', 'completion_time', 'type', 'score']]
 
-    def _process_finished_relations(self, df):
-        if df.empty:
-            return pd.DataFrame(columns=['finished_id', 'student_id', 'task_id', 'completion_time', 'completion_type', 'score'])
 
-        df['userid'] = pd.to_numeric(df['userid'], errors='coerce')
-        df = df[~df['userid'].isin([1, 2])].copy()
 
-        df['student_id'] = df['userid'].astype(int).astype(str)
-        df['completion_type'] = df['type'].astype(str)
-        df['finished_id'] = "finished_" + df['student_id'] + "_" + df['task_id']
 
-        def clean_score(val):
-            if pd.isna(val) or str(val).strip().lower() in ['nan', 'none', '<na>', '']:
-                return ""
-            return str(val)
 
-        df['score'] = df['score'].apply(clean_score)
 
-        columns_to_keep = ['finished_id', 'student_id', 'task_id', 'completion_time', 'completion_type', 'score']
-        final_df = df[columns_to_keep].copy()
-        return final_df.astype(str)
+
+
+
+
+
+
+
+
+
+
 
 
 # =====================================================================
@@ -242,12 +226,12 @@ class AttemptedTransformer():
         
         # Identify the latest attempt in the standard grades dataframe
         standard_df['is_latest'] = (standard_df.groupby(['userid', 'grade_item_id'])['timecreated'].transform('max') == standard_df['timecreated'])
-        standard_df['userid'] = standard_df['userid'].astype(int)
+        standard_df['userid'] = standard_df['userid'].astype(str)
         
         # Map the correct grade_item_id onto the xAPI dataframe
         id_mapping = tasks_df[['content_id', 'grade_item_id']].dropna().drop_duplicates()
         xapi = xapi_df.rename(columns={'user_id': 'userid'})
-        xapi['userid'] = xapi['userid'].fillna(0).astype(int)
+        xapi['userid'] = xapi['userid'].fillna(0).astype(str)
         xapi = pd.merge(xapi, id_mapping, on='content_id', how='inner')
         
         xapi = xapi.sort_values('id').groupby(['userid', 'grade_item_id']).tail(1)
@@ -312,19 +296,28 @@ class AttemptedTransformer():
         # Summarize Attempts
         all_attempts = pd.concat([standard_attempts, hotspot_attempts], ignore_index=True)
         
+        all_attempts = all_attempts.merge(
+            tasks_df[['grade_item_id', 'task_id']], 
+            on='grade_item_id', 
+            how='left',#inner'
+            indicator=True
+        )
+        
+        all_attempts.to_csv('all_attempts.csv')
+        
         all_attempts['score'] = all_attempts['result'].astype(float).round(1)
         all_attempts['passed'] = all_attempts['score'] >= 8.0
         all_attempts['timestamp_str'] = all_attempts['timecreated'].apply(lambda x: x.isoformat())
         
-        # Map the hvp items to the learning tasks 
-        task_id_mapping = tasks_df.set_index('grade_item_id')['task_id'].to_dict()
-        all_attempts['task_mapped'] = all_attempts['grade_item_id'].fillna(0).astype(int).map(lambda x: task_id_mapping.get(x, "LT"))
                
         # Clear out recovered responses if applicable
         if 'is_recovered' in all_attempts.columns:
             all_attempts.loc[all_attempts['is_recovered'] == True, 'response'] = ""
+            
+        # Remove admins
+        all_attempts = all_attempts[~all_attempts['userid'].isin(EXCLUDED_USER_IDS)]
 
-        # 2. Format output into the final list of dictionaries
+        # Format output into the final list of dictionaries
         attempted_records = []
         for row in all_attempts.itertuples():
                         
@@ -333,13 +326,13 @@ class AttemptedTransformer():
             correct_resp = str(row.correct_responses_pattern) if pd.notna(row.correct_responses_pattern) else ""
             
             attempted_records.append({
-                "attempted_id": f"r_at_{row.userid}_{row.grade_item_id}",
+                "attempted_id": f"r_at_{row.userid}_{row.task_id}",
                 "timestamp": row.timestamp_str,
                 "score": row.score,
                 "passed": row.passed,
                 "student_response": student_resp,
                 "correct_response": correct_resp,
-                "target_id": row.task_mapped,
+                "target_id": row.task_id,
                 "source_id": row.userid
             })
             

@@ -200,18 +200,18 @@ class REFERENCES(BaseModel):
     
     
 ###############################################################################
-    
-    
-    
 
-
-
-
-
-
-    
-
-    
+class FINISHED(BaseModel):
+    label                   : ClassVar[str] = "FINISHED"
+    source_label            : ClassVar[str] = "Student"
+    target_label            : ClassVar[str] = "Learning_Task"
+    finished_id             : str
+    student_id              : str = Field(..., validation_alias="source_id")
+    task_id                 : str = Field(..., validation_alias="target_id")       
+    completion_time         : str
+    completion_type         : str
+    score                   : float
+  
 class ATTEMPTED(BaseModel):
     label                   : ClassVar[str] = "ATTEMPTED"
     source_label            : ClassVar[str] = "Student"
@@ -223,7 +223,31 @@ class ATTEMPTED(BaseModel):
     student_response        : str 
     correct_response        : str
     task_id                 : str = Field(..., validation_alias="target_id")
-    student_id              : int = Field(..., validation_alias="source_id")
+    student_id              : str = Field(..., validation_alias="source_id")
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     
@@ -289,19 +313,7 @@ class STUDIED(BaseModel):
     end_time                : str
     duration                : str
     
-class FINISHED(BaseModel):
-    label                   : ClassVar[str] = "FINISHED"
-    label_id                : ClassVar[str] = "finished_id"
-    source_label            : ClassVar[str] = "Student"
-    source_id_field         : ClassVar[str] = "student_id"
-    target_label            : ClassVar[str] = "Learning_Task"
-    target_id_field         : ClassVar[str] = "task_id"
-    finished_id             : str
-    student_id              : str
-    task_id                 : str     
-    completion_time         : str
-    completion_type         : str
-    score                   : str
+
  
 
     

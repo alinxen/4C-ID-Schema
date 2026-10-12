@@ -14,11 +14,16 @@ PTP_CSV_PATH            = os.path.join(DATA_DIR,  "a_part_task_practice.csv")
 INFORMATION_CSV_PATH    = os.path.join(DATA_DIR,  "a_lehrmaterial.csv")
 FRAMEWORK_CSV_PATH      = os.path.join(DATA_DIR,  "c_competence_framework.csv")
 TARGET_CSV_PATH         = os.path.join(DATA_DIR,  "a_lernziele.csv")
-
-
-
 GRADE_GRADES_CSV_PATH   = os.path.join(DATA_DIR,  "m_grade_grades.csv")
+
+
+
 COMPLETED_CSV_PATH      = os.path.join(DATA_DIR,  "m_course_modules_completion.csv")
+
+
+
+
+
 COURSE_MODULE_CSV_PATH  = os.path.join(DATA_DIR,  "m_course_modules.csv")
 COURSE_CSV_PATH         = os.path.join(DATA_DIR,  "course_structure.csv")
 XAPI_CSV_PATH           = os.path.join(DATA_DIR,  "m_hvp_xapi_results.csv")

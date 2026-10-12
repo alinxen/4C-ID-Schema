@@ -32,11 +32,11 @@ NODE_PIPELINE = [
 
 EDGE_PIPELINE = [
      ("APPLIES_KNOWLEDGE",   tf.AppliesTransformer),
-    # ("ATTEMPTED",           tf.AttemptedTransformer),
+     ("ATTEMPTED",           tf.AttemptedTransformer),
     # ("CONSULTED",           tf.ConsultedTransformer),
      ("CUES",                tf.CuesTransformer),
      ("DEVELOPS_COMPETENCE", tf.DevelopsTransformer),
-    # ("FINISHED",            tf.FinishedTransformer),
+     ("FINISHED",            tf.FinishedTransformer),
      ("GROUPS",              tf.GroupsTransformer),
      ("INCLUDES",            tf.IncludesTransformer),
      ("OFFERS",              tf.OffersTransformer),
