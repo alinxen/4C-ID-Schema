@@ -7,7 +7,8 @@ from src.config import (
     COMPLETED_CSV_PATH, 
     TASK_CSV_PATH, 
     LOGFILE_CSV_PATH, 
-    XAPI_CSV_PATH
+    XAPI_CSV_PATH,
+    PTP_CSV_PATH
     )
 
 # =====================================================================
@@ -109,7 +110,7 @@ class FinishedTransformer:
         for row in df.itertuples():
 
             attempted_records.append({
-                "finished_id": f"r_fin_{row.userid}_{row.task_id}",
+                "finished_id": f"r_fin_{row.Index}_{row.userid}_{row.task_id}",
                 "source_id": row.userid,
                 "completion_type": row.type,
                 "target_id": row.task_id,
@@ -299,7 +300,7 @@ class AttemptedTransformer():
         all_attempts = all_attempts.merge(
             tasks_df[['grade_item_id', 'task_id']], 
             on='grade_item_id', 
-            how='left',#inner'
+            how='inner',#inner'
             indicator=True
         )
         
@@ -326,7 +327,7 @@ class AttemptedTransformer():
             correct_resp = str(row.correct_responses_pattern) if pd.notna(row.correct_responses_pattern) else ""
             
             attempted_records.append({
-                "attempted_id": f"r_at_{row.userid}_{row.task_id}",
+                "attempted_id": f"attempted_{row.Index}",
                 "timestamp": row.timestamp_str,
                 "score": row.score,
                 "passed": row.passed,
@@ -339,3 +340,85 @@ class AttemptedTransformer():
 
             
         return pd.DataFrame(attempted_records)
+    
+    
+    
+# =====================================================================
+# COMPLETED TRANSFORMER
+# =====================================================================
+
+class CompletedTransformer:
+    """
+    Processes grades and manual completions to generate COMPLETED relationships
+    specifically for Part Task Practice activities.
+    """
+    
+    DATA = {
+        "grades": (GRADE_GRADES_CSV_PATH, ['userid', 'itemid', 'rawgrade', 'finalgrade', 'timemodified']),
+        "completions": (COMPLETED_CSV_PATH, ['userid', 'coursemoduleid', 'completionstate', 'timemodified']),
+        "practices": (PTP_CSV_PATH, ['module_id', 'grade_item_id', 'practice_id'])
+    }
+        
+    def execute(self, extracted_data):
+        
+        # Extracts entries from m_grade_grades (Final grade for practice tasks)
+        df_attempts = self._get_attempt_completions(extracted_data)
+        # Extracts entries from m_course_modules_completion (Button in practice tasks)
+        df_buttons  = self._get_button_completions(extracted_data)
+        
+        # Combine DataFrames and only keep "button" if no "attempt" was registered first
+        df_combined = pd.concat([df_attempts, df_buttons], ignore_index=True)
+        df_combined = df_combined.sort_values('type')
+        df_combined = df_combined.drop_duplicates(subset=['userid', 'practice_id'], keep='first')
+        
+        # Remove admins
+        df = df_combined[~df_combined['userid'].isin(EXCLUDED_USER_IDS)].copy()
+        
+        # Format output into the final list of dictionaries
+        completed_records = []
+        for row in df.itertuples():
+            completed_records.append({
+                "completed_id": f"r_comp_{row.Index}_{row.userid}_{row.practice_id}",
+                "source_id": row.userid,
+                "completion_type": row.type,
+                "target_id": row.practice_id,
+                "completion_time": row.completion_time,
+                "score": row.score
+            })
+            
+        return pd.DataFrame(completed_records)
+    
+    def _get_attempt_completions(self, extracted_data):
+        grades_raw = extracted_data["grades"].copy()
+        practices  = extracted_data["practices"].copy()
+        
+        filtered = grades_raw.dropna(subset=['timemodified', 'rawgrade']).copy()
+        grades = filtered.merge(practices, how='inner', left_on='itemid', right_on='grade_item_id')
+        grades['type'] = 'attempt'
+        grades['score'] = grades['finalgrade'].round(1)
+        
+        # Convert Unix timestamp to readable datetime and adjust timezone 
+        grades['completion_time'] = (
+            pd.to_datetime(grades['timemodified'], unit='s', utc=True)
+            .dt.tz_convert('Europe/Berlin')
+            .dt.strftime('%Y-%m-%dT%H:%M:%S')
+        )
+        return grades[['userid', 'practice_id', 'completion_time', 'type', 'score']]
+
+    def _get_button_completions(self, extracted_data):
+        completions = extracted_data["completions"].copy()
+        practices   = extracted_data["practices"].copy()
+        
+        # Only keep actual manual completions
+        completions = completions[completions['completionstate'] == 1]
+        df_button = completions.merge(practices, how='inner', left_on='coursemoduleid', right_on='module_id')
+        df_button['type'] = 'button'
+        df_button['score'] = None
+        
+        df_button['completion_time'] = (
+            pd.to_datetime(df_button['timemodified'], unit='s', utc=True)
+            .dt.tz_convert('Europe/Berlin')
+            .dt.strftime('%Y-%m-%dT%H:%M:%S')
+        )
+        return df_button[['userid', 'practice_id', 'completion_time', 'type', 'score']]
+

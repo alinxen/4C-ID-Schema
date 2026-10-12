@@ -16,7 +16,8 @@ from .edge_transformers_1 import (
 
 from .edge_transformers_2 import ( 
     AttemptedTransformer, 
-    FinishedTransformer
+    FinishedTransformer,
+    CompletedTransformer
     )
 
 from .edge_transformers_3  import (
@@ -67,5 +68,6 @@ __all__ = [
     "TackledTransformer",
     "TaskClassTransformer",
     "TaskTransformer",
-    "TrainsTransformer"
+    "TrainsTransformer",
+    "CompletedTransformer"
 ]

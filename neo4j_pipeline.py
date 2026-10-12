@@ -48,7 +48,8 @@ EDGE_PIPELINE = [
     # ("REVIEWED",            tf.ReviewedTransformer),
     # ("STUDIED",             tf.StudiedTransformer),
     # ("TACKLED",             tf.TackledTransformer),
-     ("TRAINS",              tf.TrainsTransformer)
+     ("TRAINS",              tf.TrainsTransformer),
+     ("COMPLETED",           tf.CompletedTransformer)
 ]
 
 # ---------------------------------------------------------

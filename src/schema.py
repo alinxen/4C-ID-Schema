@@ -199,8 +199,6 @@ class REFERENCES(BaseModel):
     si_id                   : str = Field(..., validation_alias="target_id")  
     
     
-###############################################################################
-
 class FINISHED(BaseModel):
     label                   : ClassVar[str] = "FINISHED"
     source_label            : ClassVar[str] = "Student"
@@ -212,6 +210,7 @@ class FINISHED(BaseModel):
     completion_type         : str
     score                   : float
   
+    
 class ATTEMPTED(BaseModel):
     label                   : ClassVar[str] = "ATTEMPTED"
     source_label            : ClassVar[str] = "Student"
@@ -226,6 +225,17 @@ class ATTEMPTED(BaseModel):
     student_id              : str = Field(..., validation_alias="source_id")
     
     
+class COMPLETED(BaseModel):
+    label                   : ClassVar[str] = "COMPLETED"
+    source_label            : ClassVar[str] = "Student"
+    target_label            : ClassVar[str] = "Part_Task_Practice"
+    completed_id            : str
+    student_id              : str = Field(..., validation_alias="source_id")
+    practice_id             : str = Field(..., validation_alias="target_id")       
+    completion_time         : str
+    completion_type         : str
+    score                   : float    
+   
     
     
     
@@ -234,23 +244,7 @@ class ATTEMPTED(BaseModel):
     
     
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+##################################################################
 
 
  
