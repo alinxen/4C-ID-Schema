@@ -237,75 +237,60 @@ class COMPLETED(BaseModel):
     score                   : float    
    
     
-    
-    
-    
-    
-    
-    
-    
-##################################################################
+ ##########################################################################   
 
-
- 
-
-class TACKLED(BaseModel):
-    label                   : ClassVar[str] = "TACKLED"
-    label_id                : ClassVar[str] = "tackled_id"
-    source_label            : ClassVar[str] = "Learning_Session"
-    source_id_field         : ClassVar[str] = "session_id"
-    target_label            : ClassVar[str] = "Learning_Task"
-    target_id_field         : ClassVar[str] = "task_id"
-    tackled_id              : str
-    session_id              : str
-    task_id                 : str     
-    start_time              : str
-    end_time                : str
-    time_spent              : str
+class STUDIED(BaseModel):
+    label                   : ClassVar[str] = "STUDIED"
+    source_label            : ClassVar[str] = "Student"
+    target_label            : ClassVar[str] = "Learning_Session"
+    studied_id              : str
+    student_id              : str = Field(..., validation_alias="source_id")
+    session_id              : str = Field(..., validation_alias="target_id")    
+    start_time              : datetime
+    end_time                : datetime
+    duration                : float
     
-class REVIEWED(BaseModel):
-    label                   : ClassVar[str] = "REVIEWED"
-    label_id                : ClassVar[str] = "reviewed_id"
-    source_label            : ClassVar[str] = "Learning_Session"
-    source_id_field         : ClassVar[str] = "session_id"
-    target_label            : ClassVar[str] = "Supportive_Information"
-    target_id_field         : ClassVar[str] = "si_id"
-    reviewed_id             : str
-    session_id              : str
-    si_id                   : str     
-    start_time              : str
-    end_time                : str
-    time_spent              : str
-    completion_time         : str
     
 class CONSULTED(BaseModel):
     label                   : ClassVar[str] = "CONSULTED"
-    label_id                : ClassVar[str] = "consulted_id"
     source_label            : ClassVar[str] = "Learning_Session"
-    source_id_field         : ClassVar[str] = "session_id"
     target_label            : ClassVar[str] = "Procedural_Information"
-    target_id_field         : ClassVar[str] = "pi_id"
     consulted_id            : str
-    session_id              : str
-    pi_id                   : str     
+    session_id              : str = Field(..., validation_alias="source_id")
+    pi_id                   : str = Field(..., validation_alias="target_id")
     start_time              : str
     end_time                : str
     time_spent              : str
     completion_time         : str
     
-class STUDIED(BaseModel):
-    label                   : ClassVar[str] = "STUDIED"
-    label_id                : ClassVar[str] = "studied_id"
-    source_label            : ClassVar[str] = "Student"
-    source_id_field         : ClassVar[str] = "student_id"
-    target_label            : ClassVar[str] = "Learning_Session"
-    target_id_field         : ClassVar[str] = "session_id"
-    studied_id              : str
-    student_id              : str
-    session_id              : str     
+    
+class TACKLED(BaseModel):
+    label                   : ClassVar[str] = "TACKLED"
+    source_label            : ClassVar[str] = "Learning_Session"
+    target_label            : ClassVar[str] = "Learning_Task"
+    tackled_id              : str
+    session_id              : str = Field(..., validation_alias="source_id")
+    task_id                 : str = Field(..., validation_alias="target_id")     
     start_time              : str
     end_time                : str
-    duration                : str
+    time_spent              : str
+    
+    
+class REVIEWED(BaseModel):
+    label                   : ClassVar[str] = "REVIEWED"
+    source_label            : ClassVar[str] = "Learning_Session"
+    target_label            : ClassVar[str] = "Supportive_Information"
+    reviewed_id             : str
+    session_id              : str = Field(..., validation_alias="source_id")
+    si_id                   : str = Field(..., validation_alias="target_id")     
+    start_time              : str
+    end_time                : str
+    time_spent              : str
+    completion_time         : str
+    
+
+    
+
     
 
  

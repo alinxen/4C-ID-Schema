@@ -1,6 +1,14 @@
 import pandas as pd
 import numpy as np
-from src.config import LOGFILE_CSV_PATH, TASK_CSV_PATH, COURSE_CSV_PATH, PAGES_CSV_PATH, COMPLETED_CSV_PATH, COURSE_MODULE_CSV_PATH
+from src.config import ( 
+    EXCLUDED_USER_IDS,
+    LOGFILE_CSV_PATH,
+    TASK_CSV_PATH, 
+    COURSE_CSV_PATH,
+    PAGES_CSV_PATH,
+    COMPLETED_CSV_PATH, 
+    COURSE_MODULE_CSV_PATH
+    )
 
 # =====================================================================
 # SHARED UTILITY FUNCTIONS (Used by Studied, Tackled, Reviewed, Consulted)
@@ -8,53 +16,89 @@ from src.config import LOGFILE_CSV_PATH, TASK_CSV_PATH, COURSE_CSV_PATH, PAGES_C
 
 def get_sessionized_data(extracted_data):
     """
-    Core vectorization engine. Reads logs, identifies session boundaries, 
-    applies the 2-minute fallback, and returns BOTH the bounding session 
-    data AND the individual logs tagged with their specific session_id.
+    Reads the raw logfile, calculates sessions for all students.
     """
-    df = extracted_data["logfile"].copy()
-    df = df[['id', 'eventname', 'action', 'objectid', 'userid', 'timecreated']].copy()
+    logfile = extracted_data["logfile"].copy()
+    logfile = logfile[['userid', 'timecreated', 'action']]   #[['id', 'eventname', 'action', 'objectid', 'userid', 'timecreated']].copy()
     
-    if df['timecreated'].dtype != 'datetime64[ns]':
-        df['timecreated'] = pd.to_datetime(df['timecreated'] + 3600, unit='s')
-        
-    df['userid'] = pd.to_numeric(df['userid'], errors='coerce')
-    df = df[df['userid'] >= 3].copy()
-    df = df.sort_values(by=['userid', 'timecreated']).reset_index(drop=True)
+    # Adjust timezone, sort chronologically, and remove system/admin accounts.
+    logfile['timecreated'] = pd.to_datetime(logfile['timecreated'], unit='s', utc=True)
+    logfile['timecreated'] = logfile['timecreated'].dt.tz_convert('Europe/Berlin')
+    logfile['timecreated'] = logfile['timecreated'].dt.tz_localize(None)
+    logfile = logfile[~logfile['userid'].isin(EXCLUDED_USER_IDS)]
+    logfile = logfile.sort_values(by=['userid', 'timecreated']).reset_index(drop=True).copy()
 
-    # 1. Block sessions by login
-    df['is_login'] = df['action'] == 'loggedin'
-    df['session_group'] = df.groupby('userid')['is_login'].cumsum()
-    df = df[df['session_group'] > 0].copy() # Drop actions before first login
+    # Group events into sessions based on a 30-minute inactivity threshold 
+
+    logfile['time_gap'] = logfile.groupby('userid')['timecreated'].diff()
+    is_new_session = logfile['time_gap'] > pd.Timedelta(minutes=30)
+    is_first_event = logfile['time_gap'].isna()
+    logfile['session_idx'] = (is_new_session | is_first_event).cumsum()
     
-    # 2. Bound sessions by logout
-    df['is_logout'] = df['action'] == 'loggedout'
-    df['logout_cumsum'] = df.groupby(['userid', 'session_group'])['is_logout'].cumsum()
+    # Group by user and the new session index to get exact start and end boundaries
+    sessions_df = logfile.groupby(['userid', 'session_idx']).agg(
+       start_time=('timecreated', 'min'),
+       end_time=('timecreated', 'max'),
+       total_actions=('action', 'count')
+      ).reset_index()
     
-    valid_mask = (df['logout_cumsum'] == 0) | ((df['logout_cumsum'] == 1) & df['is_logout'])
-    sessionized_logs = df[valid_mask].copy()
+    # Drop sessions where the student only clicked once
+    sessions_df = sessions_df[sessions_df['start_time'] != sessions_df['end_time']].copy().reset_index(drop=True)
 
-    # 3. Calculate Session Start and End Times
-    session_bounds = sessionized_logs.groupby(['userid', 'session_group']).agg(
-        session_start=('timecreated', 'first'),
-        last_action=('timecreated', 'last'),
-        has_logout=('is_logout', 'max')
-    ).reset_index()
+    learning_sessions = []
+    for row in sessions_df.itertuples():
+        learning_sessions.append({
+            "session_id": f"session_{row.userid}_{row.start_time}",
+            "student_id": row.userid,
+            "start_time": row.start_time, 
+            "end_time":   row.end_time,
+            "total_actions": row.total_actions
+        })
 
-    session_bounds['session_end'] = np.where(
-        session_bounds['has_logout'],
-        session_bounds['last_action'],
-        session_bounds['last_action'] + pd.Timedelta(minutes=2)
-    )
 
-    # 4. Generate the universal session_id
-    session_bounds['session_id'] = "session_" + session_bounds['userid'].astype(int).astype(str) + "_" + session_bounds['session_start'].dt.strftime('%Y-%m-%dT%H:%M:%S')
 
-    # 5. Attach the session details back to every individual log event
-    cols_to_merge = ['userid', 'session_group', 'session_start', 'session_end', 'session_id']
-    sessionized_logs = pd.merge(sessionized_logs, session_bounds[cols_to_merge], on=['userid', 'session_group'], how='left')
 
-    return sessionized_logs, session_bounds
+    return pd.DataFrame(learning_sessions)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def get_completion_timestamps(extracted_data):
@@ -110,22 +154,24 @@ class StudiedTransformer:
 
     def execute(self, extracted_data):
         # Utilizes shared logic to independently calculate sessions
-        _, session_bounds = get_sessionized_data(extracted_data)
+        learning_sessions = get_sessionized_data(extracted_data)
+        learning_sessions['duration']   = ((learning_sessions['end_time'] - learning_sessions['start_time']).dt.total_seconds() / 60.0)
         
-        if session_bounds.empty:
-            return pd.DataFrame()
+        studied = []
+        for row in learning_sessions.itertuples():
+            studied.append({
+                "studied_id": f"studied_{row.student_id}_{row.start_time}",
+                "source_id": row.student_id,
+                "start_time": row.start_time, 
+                "end_time":   row.end_time,
+                "duration": row.duration,
+                "target_id": row.session_id
+            })
 
-        df = session_bounds.copy()
-        df['student_id'] = df['userid'].astype(int).astype(str)
-        df['start_time'] = df['session_start'].dt.strftime('%Y-%m-%dT%H:%M:%S')
-        df['end_time']   = df['session_end'].dt.strftime('%Y-%m-%dT%H:%M:%S')
-        df['duration']   = ((df['session_end'] - df['session_start']).dt.total_seconds() / 60.0).astype(str)
+
+
+        return pd.DataFrame(studied)
         
-        df['studied_id'] = "studied_" + df['student_id'] + "_" + df['start_time']
-
-        cols = ['studied_id', 'student_id', 'session_id', 'start_time', 'end_time', 'duration']
-        return df[cols].copy().astype(str)
-
 # =====================================================================
 # TACKLED TRANSFORMER
 # =====================================================================
@@ -133,36 +179,82 @@ class StudiedTransformer:
 class TackledTransformer:
     DATA = {
         "logfile": (LOGFILE_CSV_PATH, ['id', 'eventname', 'action', 'objectid', 'userid', 'timecreated']),
-        "tasks": (TASK_CSV_PATH, ['id', 'name'])
+        #"tasks": (TASK_CSV_PATH, ['id', 'name'])
     }
 
     def execute(self, extracted_data):
-        sessionized_logs, _ = get_sessionized_data(extracted_data)
-        views = calculate_view_durations(sessionized_logs)
-        if views.empty: return pd.DataFrame()
-
-        # Filter for Learning Tasks
-        tasks = views[views['eventname'] == r'\mod_hvp\event\course_module_viewed'].copy()
-        if tasks.empty: return pd.DataFrame()
-
-        # FIX: Safe ID string mapping 
-        tasks_map_df = extracted_data["tasks"].copy()
-        tasks_map_df['id_clean'] = pd.to_numeric(tasks_map_df['id'], errors='coerce').astype('Int64').astype(str)
-        task_prefix_map = tasks_map_df.set_index('id_clean')['name'].astype(str).str[:2].to_dict()
         
-        tasks['objectid_clean'] = pd.to_numeric(tasks['objectid'], errors='coerce').astype('Int64').astype(str)
-        tasks['task_id'] = tasks['objectid_clean'].map(task_prefix_map).fillna("LT")
         
-        # Schema formatting
-        tasks['student_id'] = tasks['userid'].astype(int).astype(str)
-        tasks['start_time'] = tasks['timecreated'].dt.strftime('%Y-%m-%dT%H:%M:%S')
-        tasks['end_time']   = tasks['end_time'].dt.strftime('%Y-%m-%dT%H:%M:%S')
-        
-        tasks['tackled_id'] = "tackled_" + tasks['student_id'] + "_" + tasks['task_id'] + "_" + tasks['start_time']
-        tasks['time_spent'] = ((pd.to_datetime(tasks['end_time']) - pd.to_datetime(tasks['start_time'])).dt.total_seconds() / 60.0).astype(str)
+        return pd.DataFrame()
+        # sessionized_logs, _ = get_sessionized_data(extracted_data)
+        # views = calculate_view_durations(sessionized_logs)
+        # if views.empty: return pd.DataFrame()
 
-        cols = ['tackled_id', 'session_id', 'task_id', 'start_time', 'end_time', 'time_spent']
-        return tasks[cols].copy().astype(str)
+        # # Filter for Learning Tasks
+        # tasks = views[views['eventname'] == r'\mod_hvp\event\course_module_viewed'].copy()
+        # if tasks.empty: return pd.DataFrame()
+
+        # # FIX: Safe ID string mapping 
+        # tasks_map_df = extracted_data["tasks"].copy()
+        # tasks_map_df['id_clean'] = pd.to_numeric(tasks_map_df['id'], errors='coerce').astype('Int64').astype(str)
+        # task_prefix_map = tasks_map_df.set_index('id_clean')['name'].astype(str).str[:2].to_dict()
+        
+        # tasks['objectid_clean'] = pd.to_numeric(tasks['objectid'], errors='coerce').astype('Int64').astype(str)
+        # tasks['task_id'] = tasks['objectid_clean'].map(task_prefix_map).fillna("LT")
+        
+        # # Schema formatting
+        # tasks['student_id'] = tasks['userid'].astype(int).astype(str)
+        # tasks['start_time'] = tasks['timecreated'].dt.strftime('%Y-%m-%dT%H:%M:%S')
+        # tasks['end_time']   = tasks['end_time'].dt.strftime('%Y-%m-%dT%H:%M:%S')
+        
+        # tasks['tackled_id'] = "tackled_" + tasks['student_id'] + "_" + tasks['task_id'] + "_" + tasks['start_time']
+        # tasks['time_spent'] = ((pd.to_datetime(tasks['end_time']) - pd.to_datetime(tasks['start_time'])).dt.total_seconds() / 60.0).astype(str)
+
+        # cols = ['tackled_id', 'session_id', 'task_id', 'start_time', 'end_time', 'time_spent']
+        # return tasks[cols].copy().astype(str)
+
+  
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+
 
 # =====================================================================
 # REVIEWED TRANSFORMER (Supportive Information)

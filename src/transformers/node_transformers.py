@@ -166,7 +166,7 @@ class LearningSessionTransformer(NodeTransformer):
         learning_sessions = []
         for row in sessions_df.itertuples():
             learning_sessions.append({
-                "session_id": f"session_{row.Index + 1}",
+                "session_id": f"session_{row.userid}_{row.start_time}",
                 "student_id": row.userid,
                 "start_time": row.start_time, 
                 "end_time":   row.end_time,

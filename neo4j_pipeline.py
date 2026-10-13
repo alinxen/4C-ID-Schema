@@ -46,8 +46,8 @@ EDGE_PIPELINE = [
      ("REQUIRES_KNOWLEDGE",  tf.RequiresKTransformer),
      ("REQUIRES_SKILL",      tf.RequiresSTransformer),
     # ("REVIEWED",            tf.ReviewedTransformer),
-    # ("STUDIED",             tf.StudiedTransformer),
-    # ("TACKLED",             tf.TackledTransformer),
+     ("STUDIED",             tf.StudiedTransformer),
+     ("TACKLED",             tf.TackledTransformer),
      ("TRAINS",              tf.TrainsTransformer),
      ("COMPLETED",           tf.CompletedTransformer)
 ]

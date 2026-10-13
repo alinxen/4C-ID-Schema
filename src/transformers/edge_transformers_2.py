@@ -304,7 +304,6 @@ class AttemptedTransformer():
             indicator=True
         )
         
-        all_attempts.to_csv('all_attempts.csv')
         
         all_attempts['score'] = all_attempts['result'].astype(float).round(1)
         all_attempts['passed'] = all_attempts['score'] >= 8.0
