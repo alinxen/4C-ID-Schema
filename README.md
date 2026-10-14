@@ -63,6 +63,12 @@ NEO4J_PASSWORD=your_secure_password_here
 
 ---
 
+## Data
+
+The Moodle-Data used for this project is published seperately.
+
+---
+
 ## How to Run This Project
 
 You can run this project in two different ways depending on your workflow.
