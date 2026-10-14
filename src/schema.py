@@ -249,6 +249,18 @@ class STUDIED(BaseModel):
     start_time              : datetime
     end_time                : datetime
     duration                : float
+  
+    
+class TACKLED(BaseModel):
+    label                   : ClassVar[str] = "TACKLED"
+    source_label            : ClassVar[str] = "Learning_Session"
+    target_label            : ClassVar[str] = "Learning_Task"
+    tackled_id              : str
+    session_id              : str = Field(..., validation_alias="source_id")
+    task_id                 : str = Field(..., validation_alias="target_id")     
+    start_time              : datetime
+    end_time                : datetime
+    duration                : float
     
     
 class CONSULTED(BaseModel):
@@ -258,22 +270,9 @@ class CONSULTED(BaseModel):
     consulted_id            : str
     session_id              : str = Field(..., validation_alias="source_id")
     pi_id                   : str = Field(..., validation_alias="target_id")
-    start_time              : str
-    end_time                : str
-    time_spent              : str
-    completion_time         : str
-    
-    
-class TACKLED(BaseModel):
-    label                   : ClassVar[str] = "TACKLED"
-    source_label            : ClassVar[str] = "Learning_Session"
-    target_label            : ClassVar[str] = "Learning_Task"
-    tackled_id              : str
-    session_id              : str = Field(..., validation_alias="source_id")
-    task_id                 : str = Field(..., validation_alias="target_id")     
-    start_time              : str
-    end_time                : str
-    time_spent              : str
+    start_time              : datetime
+    end_time                : datetime
+    duration                : float   
     
     
 class REVIEWED(BaseModel):
@@ -283,10 +282,9 @@ class REVIEWED(BaseModel):
     reviewed_id             : str
     session_id              : str = Field(..., validation_alias="source_id")
     si_id                   : str = Field(..., validation_alias="target_id")     
-    start_time              : str
-    end_time                : str
-    time_spent              : str
-    completion_time         : str
+    start_time              : datetime
+    end_time                : datetime
+    duration                : float
     
 
     
