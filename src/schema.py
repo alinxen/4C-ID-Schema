@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import ClassVar
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 # -------------------------------------------------
@@ -235,9 +235,7 @@ class COMPLETED(BaseModel):
     completion_time         : str
     completion_type         : str
     score                   : float    
-   
-    
- ##########################################################################   
+
 
 class STUDIED(BaseModel):
     label                   : ClassVar[str] = "STUDIED"
@@ -248,7 +246,7 @@ class STUDIED(BaseModel):
     session_id              : str = Field(..., validation_alias="target_id")    
     start_time              : datetime
     end_time                : datetime
-    duration                : float
+    duration                : timedelta
   
     
 class TACKLED(BaseModel):
@@ -260,7 +258,7 @@ class TACKLED(BaseModel):
     task_id                 : str = Field(..., validation_alias="target_id")     
     start_time              : datetime
     end_time                : datetime
-    duration                : float
+    duration                : timedelta
     
     
 class CONSULTED(BaseModel):
@@ -272,7 +270,7 @@ class CONSULTED(BaseModel):
     pi_id                   : str = Field(..., validation_alias="target_id")
     start_time              : datetime
     end_time                : datetime
-    duration                : float   
+    duration                : timedelta   
     
     
 class REVIEWED(BaseModel):
@@ -284,9 +282,18 @@ class REVIEWED(BaseModel):
     si_id                   : str = Field(..., validation_alias="target_id")     
     start_time              : datetime
     end_time                : datetime
-    duration                : float
+    duration                : timedelta
     
-
+class TRIED(BaseModel):
+    label                   : ClassVar[str] = "TRIED"
+    source_label            : ClassVar[str] = "Learning_Session"
+    target_label            : ClassVar[str] = "Part_Task_Practice"
+    tried_id                : str
+    session_id              : str = Field(..., validation_alias="source_id")
+    practice_id             : str = Field(..., validation_alias="target_id")     
+    start_time              : datetime
+    end_time                : datetime
+    duration                : timedelta
     
 
     

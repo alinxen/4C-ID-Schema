@@ -1,14 +1,10 @@
 import pandas as pd
-import numpy as np
 from src.config import ( 
     EXCLUDED_USER_IDS,
     LOGFILE_CSV_PATH,
     TASK_CSV_PATH, 
-    COURSE_CSV_PATH,
-    PAGES_CSV_PATH,
-    COMPLETED_CSV_PATH, 
-    COURSE_MODULE_CSV_PATH,
-    INFORMATION_CSV_PATH
+    INFORMATION_CSV_PATH,
+    PTP_CSV_PATH
     )
 
 # =====================================================================
@@ -86,48 +82,6 @@ def calculate_view_durations(sessionized_logs):
     return views
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-def get_completion_timestamps(extracted_data):
-    """Builds a dictionary of {(userid, instance_id): 'completion_time_str'} for PI/SI pages."""
-    try:
-        completions = extracted_data["completions"].copy()
-        modules = extracted_data["modules"].copy()
-        
-        completions = completions[completions['completionstate'] == 1]
-        df_merged = completions.merge(modules, how='inner', left_on='coursemoduleid', right_on='id')
-        
-        # mod_page
-        completed_pages = df_merged[df_merged['module'] == 17].copy()
-        if completed_pages.empty:
-            return {}
-            
-        completed_pages['timemodified'] = pd.to_datetime(completed_pages['timemodified'], unit='s')
-        # Use a space between date and time to match your original legacy format exactly
-        completed_pages['completion_time_str'] = completed_pages['timemodified'].dt.strftime('%Y-%m-%dT%H:%M:%S') 
-        
-        # FIX: Force Int64 to drop the '.0' float artifact before stringifying
-        completed_pages['instance_str'] = pd.to_numeric(completed_pages['instance'], errors='coerce').astype('Int64').astype(str)
-        completed_pages['userid_str']   = pd.to_numeric(completed_pages['userid'], errors='coerce').astype('Int64').astype(str)
-        
-        return completed_pages.set_index(['userid_str', 'instance_str'])['completion_time_str'].to_dict()
-    except Exception as e:
-        print(f"Completion Mapping Warning: {e}")
-        return {}
-
-
-
-
 # =====================================================================
 # STUDIED TRANSFORMER
 # =====================================================================
@@ -140,7 +94,7 @@ class StudiedTransformer:
     def execute(self, extracted_data):
         # Utilizes shared logic to independently calculate sessions
         _,learning_sessions = get_sessionized_data(extracted_data)
-        learning_sessions['duration']   = ((learning_sessions['end_time'] - learning_sessions['start_time']).dt.total_seconds() / 60.0)
+        learning_sessions['duration'] = learning_sessions['end_time'] - learning_sessions['start_time']
         
         studied = []
         for row in learning_sessions.itertuples():
@@ -182,7 +136,7 @@ class TackledTransformer:
             right_on='content_id'
         )
         
-        combined_tasks['duration']   = ((combined_tasks['end_time'] - combined_tasks['timecreated']).dt.total_seconds() / 60.0)
+        combined_tasks['duration']   = combined_tasks['end_time'] - combined_tasks['timecreated']
         
         tackled = []
         for row in combined_tasks.itertuples():
@@ -226,7 +180,7 @@ class ConsultedTransformer:
             right_on='page_id'
         )
         
-        pages_pi['duration']   = ((pages_pi['end_time'] - pages_pi['timecreated']).dt.total_seconds() / 60.0)
+        pages_pi['duration']   = pages_pi['end_time'] - pages_pi['timecreated']
         
         consulted = []
         for row in pages_pi.itertuples():
@@ -270,7 +224,7 @@ class ReviewedTransformer:
             right_on='page_id'
         )
 
-        pages_si['duration']   = ((pages_si['end_time'] - pages_si['timecreated']).dt.total_seconds() / 60.0)
+        pages_si['duration']   = pages_si['end_time'] - pages_si['timecreated']
         
         reviewed = []
         for row in pages_si.itertuples():
@@ -285,3 +239,44 @@ class ReviewedTransformer:
             })
             
         return pd.DataFrame(reviewed)
+
+# =====================================================================
+# TRIED TRANSFORMER (Part Task Practice)
+# =====================================================================
+
+class TriedTransformer:
+    DATA = {
+        "logfile": (LOGFILE_CSV_PATH, ['userid', 'timecreated', 'action', 'eventname','other','id', 'objectid']),
+        "ptp":   (PTP_CSV_PATH, ['content_id', 'practice_title','practice_id'])
+    }
+
+    def execute(self, extracted_data):
+        
+        logfile_sessions,sessions = get_sessionized_data(extracted_data)
+        views = calculate_view_durations(logfile_sessions)
+        
+        # Filter for Learning Tasks
+        ptp = views[views['eventname'] == r'\mod_hvp\event\course_module_viewed'].copy()
+        ptp_info = extracted_data["ptp"].copy()
+        combined_ptp = ptp.merge(
+            ptp_info, 
+            how='inner', 
+            left_on='objectid', 
+            right_on='content_id'
+        )
+        
+        combined_ptp['duration']   = combined_ptp['end_time'] - combined_ptp['timecreated']
+        
+        tried = []
+        for row in combined_ptp.itertuples():
+            tried.append({
+                "tried_id": f"tried_{row.userid}_{row.timecreated}",
+                "source_id": row.session_id,
+                "student_id": row.userid,
+                "start_time": row.timecreated, 
+                "end_time":   row.end_time,
+                "duration": row.duration,
+                "target_id": row.practice_id
+            })
+            
+        return pd.DataFrame(tried)
